@@ -1,10 +1,13 @@
 # pylint: disable=unsubscriptable-object   # pylint/issues/3637
 
-import discord, asyncio
+import asyncio
+from typing import List, Optional, Union
+
+import discord
 from discord.ext import commands
-from typing import Optional, List, Union
+
 from shaak.consts import ResponseLevel, response_map
-from shaak.database import get_setting
+from shaak.database import Setting, GlobalSetting
 from shaak.helpers import chunks
 
 class Utils(commands.Cog):
@@ -12,34 +15,49 @@ class Utils(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
     
-    async def respond(self, ctx_or_message: Union[commands.Context, discord.Message], response_level: ResponseLevel, message: Optional[str] = None):
+    async def respond(self, ctx_or_message: Union[commands.Context, discord.Message], response_level: ResponseLevel, response: Optional[str] = None):
         
         if response_level not in response_map:
             raise RuntimeError(f'Invalid response level {repr(response_level)}')
+
+        if isinstance(ctx_or_message, commands.Context):
+            message: discord.Message = ctx_or_message.message
+        else:
+            message: discord.Message = ctx_or_message
         
         response_emoji, response_color = response_map[response_level]
+
+        be_loud = False
+        if response:
+            if response_level == ResponseLevel.success:
+                be_loud = True
+            else:
+                server_settings: Setting = await Setting.objects.get(server_id=message.guild.id)
+                if server_settings.verbose_errors == None:
+                    global_settings: GlobalSetting = await GlobalSetting.objects.get(id=0)
+                    be_loud = global_settings.verbose_errors
+                else:
+                    be_loud = server_settings.verbose_errors
         
-        if message and (response_level == ResponseLevel.success or await get_setting(ctx_or_message.guild.id, 'verbose_errors')):
+        if be_loud:
             
             embed = discord.Embed(
                 color=response_color,
-                description=message
+                description=response
             )
             
-            if isinstance(ctx_or_message, commands.Context):
-                await ctx_or_message.send(embed=embed)
+            if isinstance(message, commands.Context):
+                await message.send(embed=embed)
             else:
-                await ctx_or_message.channel.send(embed=embed)
+                await message.channel.send(embed=embed)
         else:
-            
-            if isinstance(ctx_or_message, commands.Context):
-                message = ctx_or_message.message
-            else:
-                message = ctx_or_message
-                
+
             await message.add_reaction(response_emoji)
     
     async def list_items(self, ctx: commands.Context, items: List[str]):
+
+        if len(items) == 0:
+            return
         
         pages = chunks(items, 10)
         page_index = 0

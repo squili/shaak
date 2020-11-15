@@ -1,5 +1,6 @@
 # setup
-run `python3 -m shaak init` and follow the steps
+fill out settings according to `shaak/settings.py:AppSettings`
+run `python3 -m shaak init`
 # run
 run `python3 -m shaak run`
 # minimum python version

@@ -1,4 +1,7 @@
-import enum, discord, dataclasses
+import dataclasses
+import enum
+
+import discord
 from discord.ext import commands
 
 class ResponseLevel(enum.Enum):
@@ -27,8 +30,22 @@ mention_none = discord.AllowedMentions(
     roles=False
 )
 
-settings_ignore = [
-    'server_id',
-    'enabled_modules',
-    'ww_exemptions'
-]
+redis_prefix = 'shaak'
+
+# serialization function for bools
+def str2bool(msg: str):
+    
+    if msg.lower() in ['false', 'no', 'disable']:
+        return False
+    elif msg.lower() in ['true', 'yes', 'enable']:
+        return True
+    else:
+        return None
+
+# setting_name: serialization_function
+setting_structure = {
+    'command_prefix':      str,
+    'verbose_errors': str2bool,
+    'authenticated_role':  int,
+    'ww_log_channel':      int,
+}

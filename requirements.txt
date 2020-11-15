@@ -1,3 +1,4 @@
 discord.py>=1.5
 ormar[postgresql]
 alembic
+aredis[hiredis]

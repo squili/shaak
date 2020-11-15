@@ -1,14 +1,8 @@
-import discord
 from typing import List
 
-def str2bool(msg: str):
-    
-    if msg.lower() in ['false', 'no', 'disable']:
-        return False
-    elif msg.lower() in ['true', 'yes', 'enable']:
-        return True
-    else:
-        return None
+import discord
+
+from shaak.consts import redis_prefix
 
 def chunks(l, n):
     n = max(1, n)
@@ -16,3 +10,13 @@ def chunks(l, n):
 
 def link_to_message(msg: discord.Message):
     return f'https://discord.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id}'
+
+def all_str(iterator):
+    for item in iterator:
+        yield str(item)
+
+def redis_key(module_name, *args):
+
+    tmp = [redis_prefix, module_name]
+    tmp.extend(args)
+    return '.'.join(all_str(tmp))

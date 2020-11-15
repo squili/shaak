@@ -1,22 +1,30 @@
-import asyncio, json, sqlalchemy, discord
-from shaak.settings import app_settings
-from shaak.database import metadata, Setting, start_database, get_command_prefix
-from shaak.manager import Manager
-from shaak.utils import Utils
-from shaak.modules.word_watch import WordWatch
-from shaak.custom_bot import CustomBot
-from discord.ext import commands
+import asyncio
+import json
+import secrets
 from pathlib import Path
+
+import discord
+import sqlalchemy
 from alembic import command
 from alembic.config import Config
+from discord.ext import commands
+
+from shaak.custom_bot import CustomBot
+from shaak.database import (GlobalSetting, get_command_prefix, metadata,
+                            start_database)
+from shaak.manager import Manager
+from shaak.modules.word_watch import WordWatch
+from shaak.modules.ban_utils import BanUtils
+from shaak.utils import Utils
+from shaak.settings import app_settings
 
 def ask_user(msg: str, default_true: bool = True):
     return input(f'{msg} [{"Y" if default_true else "y"}/{"n" if default_true else "N"}] ').strip().lower()[0:] in (['y', ''] if default_true else ['y'])
 
 async def set_db_defaults(settings):
     await start_database()
-    await Setting.objects.create(server_id=0, **settings)
-        
+    await GlobalSetting.objects.create(id=0, **settings)
+
 def initialize_bot():
     
     # initialize settings
@@ -27,22 +35,33 @@ def initialize_bot():
         settings = {}
         setting_names = [
             [ 'token',        str ],
-            [ 'database_url', str ]
+            [ 'database_url', str ],
+            [ 'status',       str ],
+            [ 'redis_host',   str ],
+            [ 'redis_port',   int ],
+            [ 'redis_db',     int ]
         ]
 
-        for name in setting_names:
-            settings[name[0]] = name[1](input(f'Enter {name[0]}: ').strip())
+        try:
+            for name in setting_names:
+                settings[name[0]] = name[1](input(f'Enter {name[0]}: ').strip())
+        except KeyboardInterrupt:
+            return
 
         print('Writing settings')
         with settings_path.open('w') as f:
             json.dump(settings, f, indent=4)
+
+    else:
+        with settings_path.open() as f:
+            settings = json.load(f)
 
     # initialize database
 
     if ask_user('Overwrite DB?'):
 
         print('Creating tables')
-        engine = sqlalchemy.create_engine(app_settings.database_url)
+        engine = sqlalchemy.create_engine(settings['database_url'])
         metadata.drop_all(engine)
         metadata.create_all(engine)
 
@@ -52,7 +71,8 @@ def initialize_bot():
         print('Enter global settings (press enter for default)')
         settings = {}
         setting_names = [
-            [ 'command_prefix', '-', str ]
+            [ 'command_prefix', '-', str ],
+            [ 'status',         'a', str ]
         ]
         for name in setting_names:
             settings[name[0]] = name[2](input(f'{name[0]} [{name[1]}]: ').strip()) or name[1]
@@ -61,50 +81,8 @@ def initialize_bot():
         ]
         for name in bool_setting_names:
             settings[name[0]] = ask_user(name[0], name[1])
+
+        settings['secret_key'] = int(secrets.token_bytes(8).hex(), 16)
         
+        print('Executing settings')
         asyncio.run(set_db_defaults(settings))
-
-def start_bot():
-    
-    print('Initializing database')
-    
-    # initialize database before starting bot
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(loop.create_task(start_database()))
-    
-    # intents and cache flags
-    intents = discord.Intents.none()
-    intents.guilds = True
-    intents.messages = True
-    intents.dm_messages = True
-    intents.reactions = True
-    member_cache_flags = discord.MemberCacheFlags(
-        online=False,
-        voice=False,
-        joined=False
-    )
-
-    # create bot
-    bot = CustomBot(
-        command_prefix=get_command_prefix,
-        intents=intents,
-        member_cache_flags=member_cache_flags
-    )
-    
-    # add cogs
-    print('Loading cogs')
-    bot.add_cog(Utils(bot))
-    manager = Manager(bot)
-    bot.add_cog(manager)
-    
-    # load modules
-    manager.load_module(WordWatch)
-
-    # start bot
-    try:
-        print('Starting bot')
-        bot.run(app_settings.token)
-    except discord.PrivilegedIntentsRequired:
-        # we currently don't use any privlidged intents, but we could one day
-        print('An intent required! Please go to https://discord.com/developers/applications/ and enable it.')
-        exit(1)

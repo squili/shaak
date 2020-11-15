@@ -2,21 +2,43 @@
 import dataclasses
 import json
 
+import aredis
 import databases
 import discord
 import ormar
 import pydantic
 import sqlalchemy
+from discord.ext import commands
 
-from shaak.helpers import str2bool
 from shaak.settings import app_settings
 
 database = databases.Database(app_settings.database_url)
 metadata = sqlalchemy.MetaData()
+redis = aredis.StrictRedis(
+                host = app_settings.redis_host,
+                port = app_settings.redis_port,
+                  db = app_settings.redis_db,
+    decode_responses = True
+)
 
 class MainMeta(ormar.ModelMeta):
     metadata = metadata
     database = database
+
+class GlobalSetting(ormar.Model):
+    class Meta(MainMeta):
+        tablename = 'global_settings'
+
+    # only allow one entry
+    id:              int = ormar.Integer    (primary_key=True, unique=True, minimum=0, maximum=0)
+
+    # defaults
+    command_prefix:  str = ormar.Text       ()
+    verbose_errors: bool = ormar.Boolean    ()
+
+    # misc
+    secret_key:      int = ormar.BigInteger ()
+    status:          str = ormar.Text       ()
 
 class Setting(ormar.Model):
     class Meta(MainMeta):
@@ -35,12 +57,6 @@ class Setting(ormar.Model):
     ww_log_channel:     int = ormar.BigInteger (nullable=True)
     ww_exemptions:      str = ormar.Text       (default='')
 
-setting_converters = {
-    'verbose_errors':     str2bool,
-    'authenticated_role': int,
-    'ww_log_channel':     int
-}
-
 class SusWord(ormar.Model):
     class Meta(MainMeta):
         tablename = 'sus_words'
@@ -50,42 +66,16 @@ class SusWord(ormar.Model):
     regex:       str           = ormar.Text       ()
     auto_delete: bool          = ormar.Boolean    ()
 
-async def new_settings(server_id: int):
-    
-    return await Setting.objects.get_or_create(server_id=server_id)
-
-async def get_setting(server_id: int, setting_name: str, descend: bool = True):
-    
-    try:
-        server_setting = (await Setting.objects.get(server_id=server_id)).dict()
-        setting_value = server_setting.get(setting_name)
-    except ormar.NoMatch:
-        await new_settings(server_id)
-        return await get_setting(server_id, setting_name, descend)
-        
-    if (server_setting == None or setting_value == None) and descend:
-        return await get_setting(0, setting_name, False)
-        
-    if setting_name == '*':
-        if descend:
-            return server_setting | await get_setting(0, setting_name, False)
-        else:
-            return server_setting
-    else:
-        return setting_value
-
-async def set_setting(server_id: int, setting_name: str, setting_value: str):
-    
-    if setting_name in setting_converters and setting_value != None:
-        setting_value = setting_converters[setting_name](setting_value)
-    
-    setting_row = await Setting.objects.get_or_create(server_id=server_id)
-    await setting_row.update(**{setting_name: setting_value})
-    
 async def start_database():
     
     await database.connect()
 
-async def get_command_prefix(_, message: discord.Message) -> str:
+async def get_command_prefix(bot: commands.Bot, message: discord.Message) -> str:
     
-    return await get_setting(message.guild.id, 'command_prefix')
+    await bot.manager_ready.wait()
+    server_settings: Setting = await Setting.objects.get(server_id=message.guild.id)
+    if server_settings.command_prefix:
+        return server_settings.command_prefix
+    else:
+        global_settings: GlobalSetting = await GlobalSetting.objects.get(id=0)
+        return global_settings.command_prefix
