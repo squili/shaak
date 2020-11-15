@@ -28,12 +28,3 @@ class BanUtils(BaseModule):
         
         await self.initialized.wait()
         await redis.delete(self.redis_key(guild.id, 'subs'))
-    
-    @commands.command('crosspost')
-    async def crosspost(self, ctx: commands.Context, target: int, message: str):
-
-        target_channel: discord.TextChannel = self.bot.get_channel(target)
-        if not isinstance(target_channel, discord.TextChannel):
-            await self.utils.respond(ctx, ResponseLevel.general_error, 'Channel not found')
-            return
-        await target_channel.send('test')
