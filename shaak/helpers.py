@@ -19,4 +19,4 @@ def redis_key(module_name, *args):
 
     tmp = [redis_prefix, module_name]
     tmp.extend(args)
-    return '.'.join(all_str(tmp))
+    return ':'.join(all_str(tmp))
