@@ -3,7 +3,7 @@ import asyncio
 import discord
 from discord.ext import commands
 
-from shaak.errors import ModuleDisabled
+from shaak.errors import ModuleDisabled, NotAllowed
 from shaak.consts import ResponseLevel
 
 class CustomBot(commands.Bot):
@@ -31,7 +31,7 @@ class CustomBot(commands.Bot):
         
         if isinstance(error, (ModuleDisabled, commands.CommandNotFound)):
             return
-        elif isinstance(error, (commands.MissingPermissions, commands.MissingRole)):
+        elif isinstance(error, (commands.MissingPermissions, NotAllowed)):
             await self.utils.respond(ctx, ResponseLevel.forbidden, 'You do not have permission to run this command')
         elif isinstance(error, discord.HTTPException) and error.code == 10008:
             print('yet another damn command interrupted before i could finish with it')

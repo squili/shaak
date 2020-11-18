@@ -6,7 +6,7 @@ import aredis
 import databases
 import discord
 import ormar
-import pydantic
+import uuid
 import sqlalchemy
 from discord.ext import commands
 
@@ -38,7 +38,6 @@ class GlobalSetting(ormar.Model):
 
     # misc
     secret_key:      int = ormar.BigInteger ()
-    status:          str = ormar.Text       ()
 
 class Setting(ormar.Model):
     class Meta(MainMeta):
@@ -52,19 +51,30 @@ class Setting(ormar.Model):
     command_prefix:     str = ormar.Text       (nullable=True)
     verbose_errors:    bool = ormar.Boolean    (nullable=True)
     authenticated_role: int = ormar.BigInteger (nullable=True)
-    
-    # word watch
-    ww_log_channel:     int = ormar.BigInteger (nullable=True)
-    ww_exemptions:      str = ormar.Text       (default='')
+    log_channel:        int = ormar.BigInteger (nullable=True)
 
 class SusWord(ormar.Model):
     class Meta(MainMeta):
         tablename = 'sus_words'
     
-    id:          int           = ormar.Integer    (primary_key=True)
-    server_id:   int           = ormar.BigInteger (index=True)
-    regex:       str           = ormar.Text       ()
-    auto_delete: bool          = ormar.Boolean    ()
+    id:           int = ormar.Integer    (primary_key=True)
+    server_id:    int = ormar.BigInteger (index=True)
+    regex:        str = ormar.Text       ()
+    auto_delete: bool = ormar.Boolean    ()
+
+class BanEvent(ormar.Model):
+    class Meta(MainMeta):
+        tablename = 'ban_events'
+
+    id:        uuid.UUID = ormar.UUID       (primary_key=True, unique=True)
+    guild_id:        int = ormar.BigInteger (index=True)
+    message_id:      int = ormar.BigInteger ()
+    message_channel: int = ormar.BigInteger ()
+    target_id:       int = ormar.BigInteger ()
+    banner_id:       int = ormar.BigInteger (nullable=True)
+    ban_reason:      str = ormar.Text       ()
+    reported:       bool = ormar.Boolean    (default=False)
+    unbanned:       bool = ormar.Boolean    (default=False)
 
 async def start_database():
     

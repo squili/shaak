@@ -29,11 +29,14 @@ class BaseModule(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: Exception):
         
+        if ctx.cog != self:
+            return
+
         if isinstance(error, ModuleDisabled):
             await self.utils.respond(ctx, ResponseLevel.module_disabled, f'Module {type(self).meta.name} disabled!')
     
     async def cog_check(self, ctx: commands.Context):
-        
+
         await self.bot.manager_ready.wait()
         await self.initialized.wait()
 

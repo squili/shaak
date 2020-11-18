@@ -7,9 +7,10 @@ from discord.ext import commands
 
 from shaak.checks import has_privlidged_role
 from shaak.consts import ModuleInfo, ResponseLevel, setting_structure
-from shaak.database import Setting
+from shaak.database import Setting, redis
 from shaak.settings import app_settings
 from shaak.custom_bot import CustomBot
+from shaak.helpers import redis_key
 
 class Manager(commands.Cog):
     
@@ -66,17 +67,26 @@ class Manager(commands.Cog):
     async def on_guild_join(self, guild: discord.Guild):
         
         await self.bot.manager_ready.wait()
+
+        # create settings
         await Setting.objects.get_or_create(server_id=guild.id)
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
         
         await self.bot.manager_ready.wait()
+
+        # delete settings
         try:
             settings: Setting = await Setting.objects.get(server_id=guild.id)
+            await settings.delete()
         except ormar.NoMatch:
-            return
-        await settings.delete()
+            pass
+
+        # delete redis entries
+        keys = await redis.scan_iter(redis_key('*', guild.id, '*'))
+        if len(keys) > 0:
+            await redis.delete(keys)
     
     @commands.command('modules.enable')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role())
@@ -119,7 +129,7 @@ class Manager(commands.Cog):
         if setting_name in setting_structure:
             server_settings: Setting = await Setting.objects.get(server_id=ctx.guild.id)
             if setting_value != None:
-                setting_value = setting_structure[setting_name](setting_value)
+                setting_value = setting_structure[setting_name][0](setting_value)
             await server_settings.update(**{setting_name: setting_value})
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
@@ -132,5 +142,5 @@ class Manager(commands.Cog):
         formatted = []
         for i in server_settings.dict().items():
             if i[0] in setting_structure:
-                formatted.append(f'{i[0]}: {"unset" if i[1] == None else i[1]}')
+                formatted.append(f'{i[0]}: {"unset" if i[1] == None else setting_structure[i[0]][1](i[1])}')
         await self.utils.list_items(ctx, formatted)

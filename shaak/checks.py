@@ -1,19 +1,18 @@
 from discord.ext import commands
 
 from shaak.database import Setting
+from shaak.helpers import check_privildged
+from shaak.errors import NotAllowed
 
 def has_privlidged_role():
     
     async def predicate(ctx: commands.Context):
-        server_settings: Setting = Setting.objects.get(server_id=ctx.guild.id)
-
-        if server_settings.authenticated_role == None:
+        privildged = check_privildged(ctx.guild, ctx.author)
+        if privildged == None:
             return False
-
-        for role in ctx.author.roles:
-            if role.id == server_settings.authenticated_role:
-                return True
-        else:
-            raise commands.MissingRole(server_settings.authenticated_role)
+        elif privildged == True:
+            return True
+        elif privildged == False:
+            raise NotAllowed()
 
     return commands.check(predicate)

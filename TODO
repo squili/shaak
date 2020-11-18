@@ -1,5 +1,16 @@
-react action system - maybe redis?
-react buttons
+in progress:
 ban utils (react buttons on ban, crossban with react buttons)
-ban command that does among us eject copypasta
+
+high priority:
+more log channels (redis)
+move module options to redis
+
+medium priority:
+product.json
+ping roles on sus word
+watch user (notify on join/message sent with cooldown)
+account age gate (kick at x, notify at y)
+
+low priority:
 message link previews in set channels
+ban command that does among us eject copypasta

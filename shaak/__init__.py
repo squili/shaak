@@ -21,7 +21,7 @@ from shaak.settings import app_settings
 def ask_user(msg: str, default_true: bool = True):
     return input(f'{msg} [{"Y" if default_true else "y"}/{"n" if default_true else "N"}] ').strip().lower()[0:] in (['y', ''] if default_true else ['y'])
 
-async def set_db_defaults(settings):
+async def set_global_settings(settings):
     await start_database()
     await GlobalSetting.objects.create(id=0, **settings)
 
@@ -71,18 +71,17 @@ def initialize_bot():
         print('Enter global settings (press enter for default)')
         settings = {}
         setting_names = [
-            [ 'command_prefix', '-', str ],
-            [ 'status',         'a', str ]
+            [ 'command_prefix', '-', str ]
         ]
         for name in setting_names:
             settings[name[0]] = name[2](input(f'{name[0]} [{name[1]}]: ').strip()) or name[1]
         bool_setting_names = [
-            [ 'verbose_errors', True  ]
+            [ 'verbose_errors', True ]
         ]
         for name in bool_setting_names:
             settings[name[0]] = ask_user(name[0], name[1])
 
-        settings['secret_key'] = int(secrets.token_bytes(8).hex(), 16)
+        settings['secret_key'] = int(secrets.token_bytes(7).hex(), 16)
         
         print('Executing settings')
-        asyncio.run(set_db_defaults(settings))
+        asyncio.run(set_global_settings(settings))

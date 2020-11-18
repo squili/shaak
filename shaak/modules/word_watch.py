@@ -6,8 +6,8 @@ from discord.ext import commands
 from shaak.base_module import BaseModule
 from shaak.checks import has_privlidged_role
 from shaak.consts import ModuleInfo
-from shaak.database import SusWord, Setting
-from shaak.helpers import link_to_message
+from shaak.database import SusWord, Setting, redis
+from shaak.helpers import link_to_message, mention2id, MentionType
 from shaak.utils import ResponseLevel, Utils
 
 class WordWatch(BaseModule):
@@ -61,7 +61,7 @@ class WordWatch(BaseModule):
         await self.initialized.wait()
 
         server_settings: Setting = await Setting.objects.get(server_id=message.guild.id)
-        if str(message.channel.id) in server_settings.ww_exemptions.split(','):
+        if await redis.sismember(self.redis_key(message.guild.id, 'ignore'), message.channel.id):
             return
         
         stop = False
@@ -71,7 +71,7 @@ class WordWatch(BaseModule):
                     await message.delete()
                     stop = True
                     
-                log_channel_id = server_settings.ww_log_channel
+                log_channel_id = server_settings.log_channel
                 if log_channel_id == None:
                     return
                     
@@ -180,32 +180,26 @@ class WordWatch(BaseModule):
 
     @commands.command(name='ww.ignore')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role())
-    async def ww_ignore(self, ctx: commands.Context, channel_id: str):
-        
-        server_settings: Setting = await Setting.objects.get(server_id=ctx.guild.id)
-        exemptions = server_settings.ww_exemptions.split(',')
-        exemptions = set([i for i in exemptions if i])
-        exemptions.add(channel_id)
-        await server_settings.update(ww_exemptions=','.join(exemptions))
+    async def ww_ignore(self, ctx: commands.Context, channel_reference: str):
+
+        channel_id = mention2id(channel_reference, MentionType.channel)
+        await redis.sadd(self.redis_key(ctx.guild.id, 'ignore'), channel_id)        
         await self.utils.respond(ctx, ResponseLevel.success)
 
     @commands.command(name='ww.ignored')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role())
     async def ww_ignored(self, ctx: commands.Context):
         
-        server_settings: Setting = await Setting.objects.get(server_id=ctx.guild.id)
-        exemptions = server_settings.ww_exemptions.split(',')
-        if len(exemptions) == 0:
-            await self.utils.respond(ctx, ResponseLevel.success, 'No words found')
+        ignored = await redis.smembers(self.redis_key(ctx.guild.id, 'ignore'))
+        if len(ignored) == 0:
+            await self.utils.respond(ctx, ResponseLevel.success, 'No channels ignored')
             return
-        await self.utils.list_items(ctx, exemptions)
+        await self.utils.list_items(ctx, [f'<#{i}>' for i in ignored])
     
     @commands.command(name='ww.unignore')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role())
-    async def ww_unignore(self, ctx: commands.Context, channel_id: str):
-        
-        server_settings: Setting = await Setting.objects.get(server_id=ctx.guild.id)
-        exemptions = server_settings.ww_exemptions.split(',')
-        exemptions = set((i for i in exemptions if i and i != channel_id))
-        await server_settings.update(ww_exemptions=','.join(exemptions))
+    async def ww_unignore(self, ctx: commands.Context, channel_reference: str):
+
+        channel_id = mention2id(channel_reference, MentionType.channel)
+        await redis.srem(self.redis_key(ctx.guild.id, 'ignore'), channel_id)
         await self.utils.respond(ctx, ResponseLevel.success)

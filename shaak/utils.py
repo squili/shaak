@@ -94,3 +94,13 @@ class Utils(commands.Cog):
         
         await new_message.clear_reaction('▶')
         await new_message.clear_reaction('◀')
+
+    async def aggressive_resolve_user(self, user_id: str) -> Optional[discord.User]:
+
+        optimistic = self.bot.get_user(user_id)
+        if optimistic == None:
+            try:
+                return await self.bot.fetch_user(user_id)
+            except discord.NotFound:
+                return None
+        return optimistic

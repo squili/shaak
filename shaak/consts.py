@@ -1,51 +1,43 @@
 import dataclasses
-import enum
+from enum import Enum
 
 import discord
 from discord.ext import commands
 
-class ResponseLevel(enum.Enum):
+from shaak.helpers import str2bool, bool2str, mention2id_validate, id2mention_validate, MentionType
+
+class ResponseLevel(Enum):
     success         = 0
     general_error   = 1
     internal_error  = 2
     forbidden       = 3
     module_disabled = 4
 
-response_map = {
-    ResponseLevel.success:         [ '✅', discord.Color(0x2ecc71) ],
-    ResponseLevel.general_error:   [ '❌', discord.Color(0xd22513) ],
-    ResponseLevel.forbidden:       [ '⛔', discord.Color(0xd22513) ],
-    ResponseLevel.internal_error:  [ '‼️', discord.Color(0xd22513) ],
-    ResponseLevel.module_disabled: [ '🚫', discord.Color(0xd22513) ]
-}
-
 @dataclasses.dataclass
 class ModuleInfo:
     name:  str
     flag:  int
 
-mention_none = discord.AllowedMentions(
-    everyone=False,
-    users=False,
-    roles=False
-)
-
-redis_prefix = 'shaak'
-
-# serialization function for bools
-def str2bool(msg: str):
+class PseudoId:
     
-    if msg.lower() in ['false', 'no', 'disable']:
-        return False
-    elif msg.lower() in ['true', 'yes', 'enable']:
-        return True
-    else:
-        return None
+    def __init__(self, id: int):
+        self.id = id
 
-# setting_name: serialization_function
+color_green = discord.Color(0x2ecc71)
+color_red   = discord.Color(0xd22513)
+
+response_map = {
+    ResponseLevel.success:         [ '✅', color_green ],
+    ResponseLevel.general_error:   [ '❌', color_red   ],
+    ResponseLevel.forbidden:       [ '⛔', color_red   ],
+    ResponseLevel.internal_error:  [ '‼️', color_red   ],
+    ResponseLevel.module_disabled: [ '🚫', color_red   ]
+}
+
+# setting_name: (serialize, deserialize)
 setting_structure = {
-    'command_prefix':      str,
-    'verbose_errors': str2bool,
-    'authenticated_role':  int,
-    'ww_log_channel':      int,
+    'command_prefix':     (str, str),
+    'verbose_errors':     (str2bool, bool2str),
+    'authenticated_role': (mention2id_validate(MentionType.role), id2mention_validate(MentionType.role)),
+    'log_channel':        (mention2id_validate(MentionType.channel), id2mention_validate(MentionType.channel)),
 }

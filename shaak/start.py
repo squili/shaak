@@ -22,9 +22,9 @@ def start_bot():
     # intents and cache flags
     intents = discord.Intents.none()
     intents.guilds = True
-    intents.messages = True
-    intents.dm_messages = True
+    intents.guild_messages = True
     intents.reactions = True
+    intents.bans = True
     member_cache_flags = discord.MemberCacheFlags(
         online=False,
         voice=False,
