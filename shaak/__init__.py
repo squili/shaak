@@ -9,19 +9,11 @@ from alembic import command
 from alembic.config import Config
 from discord.ext import commands
 
-from shaak.custom_bot import CustomBot
-from shaak.database import (GlobalSetting, get_command_prefix, metadata,
-                            start_database)
-from shaak.manager import Manager
-from shaak.modules.word_watch import WordWatch
-from shaak.modules.ban_utils import BanUtils
-from shaak.utils import Utils
-from shaak.settings import app_settings
-
 def ask_user(msg: str, default_true: bool = True):
     return input(f'{msg} [{"Y" if default_true else "y"}/{"n" if default_true else "N"}] ').strip().lower()[0:] in (['y', ''] if default_true else ['y'])
 
 async def set_global_settings(settings):
+    from shaak.database import GlobalSetting, start_database
     await start_database()
     await GlobalSetting.objects.create(id=0, **settings)
 
@@ -59,6 +51,8 @@ def initialize_bot():
     # initialize database
 
     if ask_user('Overwrite DB?'):
+
+        from shaak.database import metadata
 
         print('Creating tables')
         engine = sqlalchemy.create_engine(settings['database_url'])
