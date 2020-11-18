@@ -1,5 +1,6 @@
 discord.py>=1.5
 ormar[postgresql]
 alembic
-aredis[hiredis]
+aredis
+hiredis>=0.2.0
 unpaddedbase64
