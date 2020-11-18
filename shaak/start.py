@@ -46,7 +46,7 @@ def start_bot():
     
     # load modules
     manager.load_module(WordWatch)
-    manager.load_module(BanUtils)
+    # manager.load_module(BanUtils)
 
     # start bot
     try:
