@@ -64,6 +64,9 @@ class WordWatch(BaseModule):
         
         if message.guild is None:
             return
+        
+        if not isinstance(message.author, discord.Member): # sometimes the author isn't a member
+            message.author = message.guild.get_member(message.author.id)
 
         if await redis.sismember(self.redis_key(message.guild.id, 'ig_ch'), message.channel.id):
             return
