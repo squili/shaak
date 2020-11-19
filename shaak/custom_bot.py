@@ -27,7 +27,8 @@ class CustomBot(commands.Bot):
             self.utils = self.get_cog('Utils')
         
         if isinstance(error, commands.CheckAnyFailure):
-            error = error.errors[0]
+            if len(error.errors) > 0:
+                error = error.errors[0]
         
         if isinstance(error, (ModuleDisabled, commands.CommandNotFound)):
             return
@@ -35,6 +36,8 @@ class CustomBot(commands.Bot):
             await self.utils.respond(ctx, ResponseLevel.forbidden, 'You do not have permission to run this command')
         elif isinstance(error, discord.HTTPException) and error.code == 10008:
             print('yet another damn command interrupted before i could finish with it')
+        elif isinstance(error, commands.CheckFailure):
+            await self.utils.respond(ctx, ResponseLevel.general_error, str(error))
         else:
             await self.utils.respond(ctx, ResponseLevel.internal_error, f'Unhandled error of type {type(error).__name__}. Check the console!')
             raise error

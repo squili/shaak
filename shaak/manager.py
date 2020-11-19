@@ -13,7 +13,7 @@ from shaak.custom_bot import CustomBot
 from shaak.helpers import redis_key
 
 class Manager(commands.Cog):
-    
+
     def __init__(self, bot: CustomBot):
         
         self.bot = bot
@@ -30,11 +30,18 @@ class Manager(commands.Cog):
             print(f'Invalid module metadata: {cls.__name__}')
             return
         
-        print(f'Loading {cls.__name__}')
         loaded_cog = cls(self.bot)
         self.bot.add_cog(loaded_cog)
         self.modules[cls.meta.name] = cls.meta
         self.added_cogs.append(loaded_cog)
+
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role())
+    async def cog_check(self, ctx: commands.Context):
+
+        if ctx.guild is None:
+            raise commands.NoPrivateMessage()
+        
+        return True
     
     @commands.Cog.listener()
     async def on_ready(self):
@@ -89,7 +96,6 @@ class Manager(commands.Cog):
             await redis.delete(keys)
     
     @commands.command('modules.enable')
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role())
     async def modules_enable(self, ctx: commands.Context, module_name: str):
         
         if module_name in self.modules:
@@ -100,7 +106,6 @@ class Manager(commands.Cog):
             await self.utils.respond(ctx, ResponseLevel.general_error, f'Module `{module_name}` not found')
         
     @commands.command('modules.disable')
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role())
     async def modules_disable(self, ctx: commands.Context, module_name: str):
         
         if module_name in self.modules:
@@ -121,7 +126,6 @@ class Manager(commands.Cog):
         await self.utils.list_items(ctx, entries)
     
     @commands.command('settings.set')
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role())
     async def settings_set(self, ctx: commands.Context, setting_name: str, *args):
 
         setting_value = ' '.join(args) or None

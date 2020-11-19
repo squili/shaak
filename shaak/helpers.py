@@ -94,3 +94,7 @@ async def check_privildged(guild: discord.Guild, member: discord.Member):
             return True
     else:
         return False
+    
+def bold_segment(source, start, end):
+
+    return source[:start] + '**' + source[start:end] + '**' + source[end:]

@@ -22,7 +22,7 @@ def start_bot():
     # intents and cache flags
     intents = discord.Intents.none()
     intents.guilds = True
-    intents.guild_messages = True
+    intents.guild_messages = True # bot supports dms, but currently has no reason to subscribe to them
     intents.reactions = True
     intents.bans = True
     member_cache_flags = discord.MemberCacheFlags(
@@ -45,6 +45,7 @@ def start_bot():
     bot.add_cog(manager)
     
     # load modules
+    print('Loading modules')
     manager.load_module(WordWatch)
     # manager.load_module(BanUtils)
 

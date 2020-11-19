@@ -10,6 +10,7 @@ product.json
 ping roles on sus word
 watch user (notify on join/message sent with cooldown)
 account age gate (kick at x, notify at y)
+documentation
 
 low priority:
 message link previews in set channels

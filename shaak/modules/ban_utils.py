@@ -11,6 +11,7 @@ from shaak.base_module import BaseModule
 from shaak.consts import ModuleInfo, ResponseLevel, color_red, PseudoId
 from shaak.database import redis, BanEvent, Setting
 from shaak.helpers import uuid2b64, b642uuid, id2mention, MentionType, check_privildged
+from shaak.checks import has_privlidged_role
 
 class BanUtils(BaseModule):
     
@@ -20,7 +21,11 @@ class BanUtils(BaseModule):
     )
     
     def __init__(self, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
+
+        self.extra_check(commands.has_permissions(administrator=True))
+        self.extra_check(has_privlidged_role())
     
     async def initialize(self):
         await super().initialize()

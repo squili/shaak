@@ -27,17 +27,20 @@ class Utils(commands.Cog):
         
         response_emoji, response_color = response_map[response_level]
 
-        be_loud = False
-        if response:
-            if response_level == ResponseLevel.success:
-                be_loud = True
-            else:
-                server_settings: Setting = await Setting.objects.get(server_id=message.guild.id)
-                if server_settings.verbose_errors == None:
-                    global_settings: GlobalSetting = await GlobalSetting.objects.get(id=0)
-                    be_loud = global_settings.verbose_errors
+        if message.guild is None:
+            be_loud = True
+        else:
+            be_loud = False
+            if response:
+                if response_level == ResponseLevel.success:
+                    be_loud = True
                 else:
-                    be_loud = server_settings.verbose_errors
+                    server_settings: Setting = await Setting.objects.get(server_id=message.guild.id)
+                    if server_settings.verbose_errors == None:
+                        global_settings: GlobalSetting = await GlobalSetting.objects.get(id=0)
+                        be_loud = global_settings.verbose_errors
+                    else:
+                        be_loud = server_settings.verbose_errors
         
         if be_loud:
             

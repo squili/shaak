@@ -83,9 +83,9 @@ async def start_database():
 async def get_command_prefix(bot: commands.Bot, message: discord.Message) -> str:
     
     await bot.manager_ready.wait()
-    server_settings: Setting = await Setting.objects.get(server_id=message.guild.id)
-    if server_settings.command_prefix:
-        return server_settings.command_prefix
-    else:
-        global_settings: GlobalSetting = await GlobalSetting.objects.get(id=0)
-        return global_settings.command_prefix
+    if message.guild != None:
+        server_settings: Setting = await Setting.objects.get(server_id=message.guild.id)
+        if server_settings.command_prefix:
+            return server_settings.command_prefix
+    global_settings: GlobalSetting = await GlobalSetting.objects.get(id=0)
+    return global_settings.command_prefix
