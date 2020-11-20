@@ -6,9 +6,10 @@ from typing import List, Optional, Union
 import discord
 from discord.ext import commands
 
-from shaak.consts import ResponseLevel, response_map
+from shaak.consts import ResponseLevel, response_map, color_green
 from shaak.database import Setting, GlobalSetting
-from shaak.helpers import chunks
+from shaak.helpers import chunks, platform_info
+from shaak.settings import product_settings
 
 class Utils(commands.Cog):
     
@@ -107,3 +108,19 @@ class Utils(commands.Cog):
             except discord.NotFound:
                 return None
         return optimistic
+    
+    @commands.command('about')
+    async def about(self, ctx: commands.Context):
+
+        embed = discord.Embed(
+            color=color_green,
+            title=f'{product_settings.bot_name} v{product_settings.bot_version} by {product_settings.author_name}',
+            description='\n'.join([
+                f'Bot source: {product_settings.bot_repo}',
+                f'Support the author: {product_settings.author_donate}',
+                f'Platform: {platform_info()}'
+            ]),
+            url=product_settings.author_page
+        )
+
+        await ctx.send(embed=embed)

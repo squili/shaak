@@ -8,7 +8,7 @@ from shaak.base_module import BaseModule
 from shaak.checks import has_privlidged_role
 from shaak.consts import ModuleInfo
 from shaak.database import SusWord, Setting, redis
-from shaak.helpers import link_to_message, mention2id, id2mention, MentionType, bold_segment
+from shaak.helpers import link_to_message, mention2id, id2mention, MentionType, bold_segment, bool2str
 from shaak.utils import ResponseLevel, Utils
 from shaak.errors import InvalidId
 
@@ -85,13 +85,11 @@ class WordWatch(BaseModule):
                     await message.delete()
                     stop = True
                 
-                server_settings: Setting = await Setting.objects.get(server_id=message.guild.id)
-                    
-                log_channel_id = server_settings.log_channel
+                log_channel_id = await redis.get(self.redis_key(message.guild.id, 'log'))
                 if log_channel_id == None:
                     return
                     
-                log_channel = self.bot.get_channel(log_channel_id)
+                log_channel = self.bot.get_channel(int(log_channel_id))
                 if log_channel == None:
                     return
 
@@ -99,9 +97,10 @@ class WordWatch(BaseModule):
                     bold_segment(message.content, match.start(0), match.end(0)),
                     '',
                     f'User: {id2mention(message.author.id, MentionType.user)}',
-                    f'Match: {match.group(0)}',
                     f'Pattern: /{sus[1].pattern}/',
                     f'Channel: {id2mention(message.channel.id, MentionType.channel)}',
+                    f'Time: {message.created_at.strftime("%d/%m/%y %I:%M:%S %p")}',
+                    f'Deleted: {bool2str(sus[2], "yes", "no")}',
                     f'Message: {link_to_message(message)}'
                 ]
                 
@@ -110,10 +109,16 @@ class WordWatch(BaseModule):
                     description='\n'.join(description_entries)
                 )
                 message_embed.set_author(
-                    name=f'{message.author.name}#{message.author.discriminator} triggered /{match.group(0)}/ in #{message.channel.name}',
+                    name=f'{message.author.name}#{message.author.discriminator} triggered /{sus[1].pattern}/ in #{message.channel.name}',
                     icon_url=message.author.avatar_url
                 )
-                await log_channel.send(embed=message_embed)
+
+                content = None
+                ping = await redis.get(self.redis_key(message.guild.id, 'ping'))
+                if ping:
+                    content = id2mention(int(ping), MentionType.role)
+
+                await log_channel.send(content=content, embed=message_embed)
             if stop: break
 
     async def after_invoke_hook(self, ctx: commands.Context):
@@ -303,4 +308,21 @@ class WordWatch(BaseModule):
                 id = mention2id(reference, MentionType.role)
             await redis.srem(self.redis_key(ctx.guild.id, 'ig_ch'), id)
             await redis.srem(self.redis_key(ctx.guild.id, 'ig_rl'), id)
+        await self.utils.respond(ctx, ResponseLevel.success)
+
+    @commands.command(name='ww.log')
+    async def ww_log(self, ctx: commands.Context, channel_reference: str):
+
+        channel_id = mention2id(channel_reference, MentionType.channel)
+        await redis.set(self.redis_key(ctx.guild.id, 'log'), channel_id)
+        await self.utils.respond(ctx, ResponseLevel.success)
+
+    @commands.command(name='ww.ping')
+    async def ww_ping(self, ctx: commands.Context, role_reference: str):
+
+        if role_reference == 'clear':
+            await redis.delete(self.redis_key(ctx.guild.id, 'ping'))
+        else:
+            role_id = mention2id(role_reference, MentionType.role)
+            await redis.set(self.redis_key(ctx.guild.id, 'ping'), role_id)
         await self.utils.respond(ctx, ResponseLevel.success)

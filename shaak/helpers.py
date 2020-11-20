@@ -1,10 +1,11 @@
 # pylint: disable=unsubscriptable-object   # pylint/issues/3637
 
-import unpaddedbase64
 import uuid
 import re
+import platform
 from typing import Optional
 
+import unpaddedbase64
 import discord
 from discord.ext import commands
 
@@ -37,10 +38,10 @@ def str2bool(msg: str) -> Optional[bool]:
     else:
         return None
 
-def bool2str(value: bool) -> str:
+def bool2str(value: bool, yes: str = 'on', no: str = 'off') -> str:
     if value:
-        return 'on'
-    return 'off'
+        return yes
+    return no
 
 class MentionType:
     user    = '@!'
@@ -98,3 +99,7 @@ async def check_privildged(guild: discord.Guild, member: discord.Member):
 def bold_segment(source, start, end):
 
     return source[:start] + '**' + source[start:end] + '**' + source[end:]
+
+def platform_info() -> str:
+
+    return f'{platform.python_implementation()} v{platform.python_version()} on {platform.system()}'

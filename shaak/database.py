@@ -51,7 +51,6 @@ class Setting(ormar.Model):
     command_prefix:     str = ormar.Text       (nullable=True)
     verbose_errors:    bool = ormar.Boolean    (nullable=True)
     authenticated_role: int = ormar.BigInteger (nullable=True)
-    log_channel:        int = ormar.BigInteger (nullable=True)
 
 class SusWord(ormar.Model):
     class Meta(MainMeta):

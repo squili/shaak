@@ -1,13 +1,4 @@
-in progress:
-ban utils (react buttons on ban, crossban with react buttons)
-
-high priority:
-more log channels (redis)
-move module options to redis
-
 medium priority:
-product.json
-ping roles on sus word
 watch user (notify on join/message sent with cooldown)
 account age gate (kick at x, notify at y)
 documentation
@@ -15,3 +6,7 @@ documentation
 low priority:
 message link previews in set channels
 ban command that does among us eject copypasta
+multiple status types
+
+on hold
+ban utils (react buttons on ban, crossban with react buttons): getting bot ready for initial deployment is more important than adding another module

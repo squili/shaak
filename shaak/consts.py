@@ -38,6 +38,5 @@ response_map = {
 setting_structure = {
     'command_prefix':     (str, str),
     'verbose_errors':     (str2bool, bool2str),
-    'authenticated_role': (mention2id_validate(MentionType.role), id2mention_validate(MentionType.role)),
-    'log_channel':        (mention2id_validate(MentionType.channel), id2mention_validate(MentionType.channel)),
+    'authenticated_role': (mention2id_validate(MentionType.role), id2mention_validate(MentionType.role))
 }

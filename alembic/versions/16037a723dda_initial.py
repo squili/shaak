@@ -1,6 +1,6 @@
 """initial
 
-Revision ID: db2af4d915b6
+Revision ID: 16037a723dda
 Revises: 
 Create Date: 2020-11-17 17:56:52.184489
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'db2af4d915b6'
+revision = '16037a723dda'
 down_revision = None
 branch_labels = None
 depends_on = None
