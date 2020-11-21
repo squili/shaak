@@ -5,6 +5,7 @@ from typing import Optional
 import discord
 import ormar
 from discord.ext import commands
+from discord.errors import HTTPException
 
 from shaak.base_module import BaseModule
 from shaak.checks import has_privlidged_role
@@ -70,7 +71,10 @@ class WordWatch(BaseModule):
         if not isinstance(message.author, discord.Member): # sometimes the author isn't a member
             member = message.guild.get_member(message.author.id)
             if member is None: # it might not even been in the member cache!
-                message.author = await message.guild.fetch_member(message.author.id)
+                try:
+                    message.author = await message.guild.fetch_member(message.author.id)
+                except HTTPException as e:
+                    print(e, 'when trying to get user', message.author.id)
             else:
                 message.author = member
         
