@@ -68,25 +68,16 @@ class WordWatch(BaseModule):
         if message.guild is None:
             return
         
-        if not isinstance(message.author, discord.Member): # sometimes the author isn't a member
-            member = message.guild.get_member(message.author.id)
-            if member is None: # it might not even been in the member cache!
-                try:
-                    message.author = await message.guild.fetch_member(message.author.id)
-                except HTTPException as e:
-                    print(e, 'when trying to get user', message.author.id)
-            else:
-                message.author = member
-        
         if await redis.sismember(self.redis_key(message.guild.id, 'ig_ch'), message.channel.id):
             return
 
         if message.channel.category_id and await redis.sismember(self.redis_key(message.guild.id, 'ig_ch'), message.channel.category_id):
             return
 
-        for role in message.author.roles:
-            if await redis.sismember(self.redis_key(message.guild.id, 'ig_rl'), role.id):
-                return
+        if message.webhook_id == None:
+            for role in message.author.roles:
+                if await redis.sismember(self.redis_key(message.guild.id, 'ig_rl'), role.id):
+                    return
         
         deleted = False
         matches = []
