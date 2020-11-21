@@ -3,7 +3,7 @@ import asyncio
 import discord
 from discord.ext import commands
 
-from shaak.errors import ModuleDisabled, NotAllowed
+from shaak.errors import ModuleDisabled, NotAllowed, InvalidId
 from shaak.consts import ResponseLevel
 
 class CustomBot(commands.Bot):
@@ -29,15 +29,17 @@ class CustomBot(commands.Bot):
         if isinstance(error, commands.CheckAnyFailure):
             if len(error.errors) > 0:
                 error = error.errors[0]
+        elif isinstance(error, commands.CommandInvokeError):
+            error = error.original
         
         if isinstance(error, (ModuleDisabled, commands.CommandNotFound)):
             return
         elif isinstance(error, (commands.MissingPermissions, NotAllowed)):
             await self.utils.respond(ctx, ResponseLevel.forbidden, 'You do not have permission to run this command')
         elif isinstance(error, discord.HTTPException) and error.code == 10008:
-            print('yet another damn command interrupted before i could finish with it')
-        elif isinstance(error, commands.CheckFailure):
-            await self.utils.respond(ctx, ResponseLevel.general_error, str(error))
+            await self.utils.respond(ctx, ResponseLevel.internal_error, f'HTTP error code {error.code}')
+        elif isinstance(error, (commands.CommandError, InvalidId)):
+            await self.utils.respond(ctx, ResponseLevel.general_error, str(error) or type(error).__name__)
         else:
             await self.utils.respond(ctx, ResponseLevel.internal_error, f'Unhandled error of type {type(error).__name__}. Check the console!')
             raise error

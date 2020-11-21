@@ -1,4 +1,6 @@
+# pylint: disable=unsubscriptable-object # pylint/issues/3882
 import re
+from typing import Optional
 
 import discord
 import ormar
@@ -8,7 +10,7 @@ from shaak.base_module import BaseModule
 from shaak.checks import has_privlidged_role
 from shaak.consts import ModuleInfo
 from shaak.database import SusWord, Setting, redis
-from shaak.helpers import link_to_message, mention2id, id2mention, MentionType, bold_segment, bool2str
+from shaak.helpers import link_to_message, mention2id, id2mention, MentionType, bold_segments, bool2str, getrange_s, commas, pluralize
 from shaak.utils import ResponseLevel, Utils
 from shaak.errors import InvalidId
 
@@ -82,48 +84,58 @@ class WordWatch(BaseModule):
             if await redis.sismember(self.redis_key(message.guild.id, 'ig_rl'), role.id):
                 return
         
-        stop = False
+        deleted = False
+        matches = []
         for sus in self.word_cache[message.guild.id]:
-            if (match := sus[1].search(message.content)):
-                if sus[2]:
-                    await message.delete()
-                    stop = True
+            for match in sus[1].finditer(message.content):
+                matches.append([
+                    sus[1].pattern, match.start(0), match.end(0)
+                ])
+
+        if matches:
+            log_channel_id = await redis.get(self.redis_key(message.guild.id, 'log'))
+            if log_channel_id == None:
+                return
                 
-                log_channel_id = await redis.get(self.redis_key(message.guild.id, 'log'))
-                if log_channel_id == None:
-                    return
-                    
-                log_channel = self.bot.get_channel(int(log_channel_id))
-                if log_channel == None:
-                    return
+            log_channel = self.bot.get_channel(int(log_channel_id))
+            if log_channel == None:
+                return
 
-                description_entries = [
-                    bold_segment(message.content, match.start(0), match.end(0)),
-                    '',
-                    f'User: {id2mention(message.author.id, MentionType.user)}',
-                    f'Pattern: /{sus[1].pattern}/',
-                    f'Channel: {id2mention(message.channel.id, MentionType.channel)}',
-                    f'Time: {message.created_at.strftime("%d/%m/%y %I:%M:%S %p")}',
-                    f'Deleted: {bool2str(sus[2], "yes", "no")}',
-                    f'Message: {link_to_message(message)}'
-                ]
-                
-                message_embed = discord.Embed(
-                    color=discord.Color(0xd22513),
-                    description='\n'.join(description_entries)
+            deduped_patterns = set([o[0] for o in matches])
+            pattern_list = commas([f"`{i}`" for i in deduped_patterns])
+
+            description_entries = [
+                bold_segments(message.content, [(i[1], i[2]) for i in matches]),
+                '',
+                f'User: {id2mention(message.author.id, MentionType.user)}',
+                f'Pattern{pluralize("", "s", len(matches))}: {pattern_list}',
+                f'Channel: {id2mention(message.channel.id, MentionType.channel)}',
+                f'Time: {message.created_at.strftime("%d/%m/%y %I:%M:%S %p")}',
+                f'Deleted: {bool2str(deleted, "yes", "no")}',
+                f'Message: {link_to_message(message)}'
+            ]
+            
+            message_embed = discord.Embed(
+                color=discord.Color(0xd22513),
+                description='\n'.join(description_entries)
+            )
+            message_embed.set_author(
+                name=f'{message.author.name}#{message.author.discriminator} triggered {pattern_list} in #{message.channel.name}',
+                icon_url=message.author.avatar_url
+            )
+
+            content = await redis.get(self.redis_key(message.guild.id, 'head'))
+            if content:
+                content = content.format(
+                    patterns=pattern_list,
+                    channel=message.channel.name,
+                    channel_reference=id2mention(message.channel.id, MentionType.channel),
+                    user=f'{message.author.name}#{message.author.discriminator}',
+                    user_ping=id2mention(message.author.id, MentionType.user),
+                    user_id=message.author.id
                 )
-                message_embed.set_author(
-                    name=f'{message.author.name}#{message.author.discriminator} triggered /{sus[1].pattern}/ in #{message.channel.name}',
-                    icon_url=message.author.avatar_url
-                )
 
-                content = None
-                ping = await redis.get(self.redis_key(message.guild.id, 'ping'))
-                if ping:
-                    content = id2mention(int(ping), MentionType.role)
-
-                await log_channel.send(content=content, embed=message_embed)
-            if stop: break
+            await log_channel.send(content=content, embed=message_embed)
 
     async def after_invoke_hook(self, ctx: commands.Context):
 
@@ -222,8 +234,7 @@ class WordWatch(BaseModule):
         try:
             word = self.word_cache[ctx.guild.id][index-1]
         except IndexError:
-            await self.utils.respond(ctx, ResponseLevel.general_error, f'Index {index} not found')
-            return False
+            return True
 
         try:
             sus = await SusWord.objects.get(id=word[0])
@@ -233,38 +244,58 @@ class WordWatch(BaseModule):
         
         await sus.delete()
         del self.word_cache[ctx.guild.id][index-1]
-        return True
+        return False
 
     @commands.command(name='ww.remove')
     async def ww_remove(self, ctx: commands.Context, *indexes: int):
     
-        x = 0
+        errors = []
+        offset = 0
         for index in indexes:
-            if not await self.remove_word(ctx, index - x):
-                return
-            x += 1
-
-        await self.utils.respond(ctx, ResponseLevel.success)
+            if await self.remove_word(ctx, index - offset):
+                errors.append(index)
+            else:
+                offset += 1
+        
+        if errors:
+            await self.utils.respond(ctx, ResponseLevel.general_error,
+                f'Error removing {"indices" if len(errors) != 1 else "index"} {commas(getrange_s(errors))}')
+        else:
+            await self.utils.respond(ctx, ResponseLevel.success)
 
     @commands.command(name='ww.rremove')
-    async def ww_rremove(self, ctx: commands.Context, lower: int, upper: int):
+    async def ww_rremove(self, ctx: commands.Context, *ranges: str):
     
-        for _ in range(lower, upper + 1):
-            if not await self.remove_word(ctx, lower):
-                return
+        errors = []
+        offset = 0
+        to_delete = set()
+        for range_ in ranges:
+            lower, upper = [int(i) for i in range_.split('-')]
+            to_delete.update(range(lower, upper+1))
 
-        await self.utils.respond(ctx, ResponseLevel.success)
+        for index in to_delete:
+            if await self.remove_word(ctx, index - offset):
+                errors.append(index)
+            else:
+                offset += 1
+        
+        if errors:
+            await self.utils.respond(ctx, ResponseLevel.general_error,
+                f'Error removing {"indices" if len(errors) != 1 else "index"} {commas(getrange_s(errors))}')
+        else:
+            await self.utils.respond(ctx, ResponseLevel.success)
     
     @commands.command(name='ww.qremove')
     async def ww_qremove(self, ctx: commands.Context, *patterns: str):
     
+        errors = []
         for pattern in patterns:
 
             try:
                 sus = await SusWord.objects.get(server_id=ctx.guild.id, regex=pattern)
             except ormar.NoMatch:
-                await self.utils.respond(ctx, ResponseLevel.general_error, 'Not found')
-                return
+                errors.append(pattern)
+                continue
             
             await sus.delete()
             for index, item in enumerate(self.word_cache[ctx.guild.id]):
@@ -272,7 +303,11 @@ class WordWatch(BaseModule):
                     del self.word_cache[ctx.guild.id][index]
                     break
 
-        await self.utils.respond(ctx, ResponseLevel.success)
+        if errors:
+            await self.utils.respond(ctx, ResponseLevel.general_error,
+                f'Error removing pattern{"s" if len(errors) != 1 else ""} {commas(errors)}')
+        else:
+            await self.utils.respond(ctx, ResponseLevel.success)
 
     @commands.command(name='ww.ignore')
     async def ww_ignore(self, ctx: commands.Context, reference_type: str, *references: str):
@@ -315,18 +350,20 @@ class WordWatch(BaseModule):
         await self.utils.respond(ctx, ResponseLevel.success)
 
     @commands.command(name='ww.log')
-    async def ww_log(self, ctx: commands.Context, channel_reference: str):
+    async def ww_log(self, ctx: commands.Context, channel_reference: Optional[str] = None):
 
-        channel_id = mention2id(channel_reference, MentionType.channel)
-        await redis.set(self.redis_key(ctx.guild.id, 'log'), channel_id)
+        if channel_reference:
+            channel_id = mention2id(channel_reference, MentionType.channel)
+            await redis.set(self.redis_key(ctx.guild.id, 'log'), channel_id)
+        else:
+            await redis.delete(self.redis_key(ctx.guild.id, 'log'))
         await self.utils.respond(ctx, ResponseLevel.success)
 
-    @commands.command(name='ww.ping')
-    async def ww_ping(self, ctx: commands.Context, role_reference: str):
+    @commands.command(name='ww.header')
+    async def ww_header(self, ctx: commands.Context, *, header_message: Optional[str] = None):
 
-        if role_reference == 'clear':
-            await redis.delete(self.redis_key(ctx.guild.id, 'ping'))
+        if header_message:
+            await redis.set(self.redis_key(ctx.guild.id, 'head'), header_message)
         else:
-            role_id = mention2id(role_reference, MentionType.role)
-            await redis.set(self.redis_key(ctx.guild.id, 'ping'), role_id)
+            await redis.delete(self.redis_key(ctx.guild.id, 'head'))
         await self.utils.respond(ctx, ResponseLevel.success)

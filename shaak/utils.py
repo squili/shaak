@@ -1,4 +1,4 @@
-# pylint: disable=unsubscriptable-object   # pylint/issues/3637
+# pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
 import asyncio
 from typing import List, Optional, Union
@@ -27,6 +27,7 @@ class Utils(commands.Cog):
             message: discord.Message = ctx_or_message
         
         response_emoji, response_color = response_map[response_level]
+        await message.add_reaction(response_emoji)
 
         if message.guild is None:
             be_loud = True
@@ -54,9 +55,6 @@ class Utils(commands.Cog):
                 await message.send(embed=embed)
             else:
                 await message.channel.send(embed=embed)
-        else:
-
-            await message.add_reaction(response_emoji)
     
     async def list_items(self, ctx: commands.Context, items: List[str]):
 

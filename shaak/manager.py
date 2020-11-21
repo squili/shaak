@@ -137,7 +137,7 @@ class Manager(commands.Cog):
             await server_settings.update(**{setting_name: setting_value})
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
-            await self.utils.respond(ctx, ResponseLevel.forbidden)
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'Invalid setting name')
 
     @commands.command('settings.list')
     async def settings_list(self, ctx: commands.Context):

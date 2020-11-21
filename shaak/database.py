@@ -1,4 +1,4 @@
-# pylint: disable=unsubscriptable-object # pylint/issues/3637
+# pylint: disable=unsubscriptable-object # pylint/issues/3882
 import dataclasses
 import json
 

@@ -36,7 +36,7 @@ response_map = {
 
 # setting_name: (serialize, deserialize)
 setting_structure = {
-    'command_prefix':     (str, str),
+    'command_prefix':     (str, lambda x: f'`{x}`'),
     'verbose_errors':     (str2bool, bool2str),
     'authenticated_role': (mention2id_validate(MentionType.role), id2mention_validate(MentionType.role))
 }

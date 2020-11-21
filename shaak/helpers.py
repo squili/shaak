@@ -1,9 +1,9 @@
-# pylint: disable=unsubscriptable-object   # pylint/issues/3637
+# pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
 import uuid
 import re
 import platform
-from typing import Optional
+from typing import Optional, List, Any, Tuple
 
 import unpaddedbase64
 import discord
@@ -12,9 +12,9 @@ from discord.ext import commands
 from shaak.errors import InvalidId
 from shaak.database import Setting
 
-def chunks(l, n):
-    n = max(1, n)
-    return [l[i:i+n] for i in range(0, len(l), n)]
+def chunks(lst: List[Any], size: int):
+    size = max(1, size)
+    return [lst[i:i+size] for i in range(0, len(lst), size)]
 
 def link_to_message(msg: discord.Message):
     return f'https://discord.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id}'
@@ -23,7 +23,7 @@ def all_str(iterator):
     for item in iterator:
         yield str(item)
 
-def redis_key(module_name, *args):
+def redis_key(module_name: str, *args: str):
 
     tmp = ['shaak', module_name]
     tmp.extend(args)
@@ -96,10 +96,69 @@ async def check_privildged(guild: discord.Guild, member: discord.Member):
     else:
         return False
     
-def bold_segment(source, start, end):
+def bold_segments(source: str, segments: List[Tuple[int]]) -> str:
+
+    processed = []
+    for segment in segments:
+        processed.extend(range(int(segment[0]), int(segment[1])))
+    ranges = get_int_ranges(processed)
+    offset = 0
+    result = source
+    for range_ in ranges:
+        result = bold_segment(result, range_[0] + offset, range_[1] + offset + 1)
+        offset += 4
+    return result
+
+def bold_segment(source: str, start: int, end: int) -> str:
 
     return source[:start] + '**' + source[start:end] + '**' + source[end:]
 
 def platform_info() -> str:
 
     return f'{platform.python_implementation()} v{platform.python_version()} on {platform.system()}'
+
+def get_int_ranges(numbers: List[int]) -> List[int]:
+
+    if len(numbers) == 0: return []
+    ordered = sorted(numbers)
+    ranges = []
+    first = None
+    previous = ordered.pop(0)
+    for num in ordered:
+        if num - previous == 1:
+            if first == None:
+                first = previous
+        elif first != None:
+            ranges.append((first, previous))
+            first = None
+        else:
+            ranges.append((previous, previous))
+        previous = num
+    if first == None:
+        ranges.append((previous, previous))
+    else:
+        ranges.append((first, previous))
+    return ranges
+
+def getrange_s(numbers: List[int]) -> List[str]:
+
+    results = []
+    for item in get_int_ranges(numbers):
+        if item[0] == item[1]:
+            results.append(str(item[0]))
+        else:
+            results.append(f'{item[0]}-{item[1]}')
+    return results
+
+def commas(values: List[Any]) -> str:
+
+    if len(values) == 0: return ''
+    if len(values) == 1: return str(values[0])
+    if len(values) == 2: return f'{values[0]} and {values[1]}'
+    values[-1] = f'and {values[-1]}'
+    return ', '.join(values)
+
+def pluralize(single: str, plural: str, length: int) -> str:
+    if length == 1:
+        return single
+    return plural
