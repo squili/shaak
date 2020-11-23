@@ -3,7 +3,7 @@
 import uuid
 import re
 import platform
-from typing import Optional, List, Any, Tuple
+from typing import Optional, List, Any, Tuple, Union, TypeVar
 
 import unpaddedbase64
 import discord
@@ -11,6 +11,8 @@ from discord.ext import commands
 
 from shaak.errors import InvalidId
 from shaak.database import Setting
+
+T = TypeVar('T')
 
 def chunks(lst: List[Any], size: int):
     size = max(1, size)
@@ -37,6 +39,14 @@ def str2bool(msg: str) -> Optional[bool]:
         return True
     else:
         return None
+
+def ensurebool(maybe_msg: Union[str, bool]) -> bool:
+    if type(maybe_msg) == bool:
+        return maybe_msg
+    resp = str2bool(maybe_msg)
+    if resp == None:
+        raise ValueError(maybe_msg)
+    return resp
 
 def bool2str(value: bool, yes: str = 'on', no: str = 'off') -> str:
     if value:
@@ -162,3 +172,6 @@ def pluralize(single: str, plural: str, length: int) -> str:
     if length == 1:
         return single
     return plural
+
+def pass_value(value: T) -> T:
+    return value

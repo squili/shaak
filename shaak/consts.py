@@ -4,7 +4,7 @@ from enum import Enum
 import discord
 from discord.ext import commands
 
-from shaak.helpers import str2bool, bool2str, mention2id_validate, id2mention_validate, MentionType
+from shaak.helpers import str2bool, bool2str, mention2id_validate, id2mention_validate, MentionType, ensurebool, pass_value
 
 class ResponseLevel(Enum):
     success         = 0
@@ -39,4 +39,20 @@ setting_structure = {
     'command_prefix':     (str, lambda x: f'`{x}`'),
     'verbose_errors':     (str2bool, bool2str),
     'authenticated_role': (mention2id_validate(MentionType.role), id2mention_validate(MentionType.role))
+}
+
+class MatchType(Enum):
+    regex = 0
+    word = 1
+
+def str_to_match_type(stuff: str) -> MatchType:
+    if stuff.startswith('_'):
+        raise AttributeError(stuff)
+    return getattr(MatchType, stuff)
+
+watch_setting_map = {
+    'del': ensurebool,
+    'cased': ensurebool,
+    'type': str_to_match_type,
+    'ping': pass_value
 }

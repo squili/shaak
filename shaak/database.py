@@ -1,6 +1,7 @@
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
 import dataclasses
 import json
+from typing import Optional, List
 
 import aredis
 import databases
@@ -52,14 +53,34 @@ class Setting(ormar.Model):
     verbose_errors:    bool = ormar.Boolean    (nullable=True)
     authenticated_role: int = ormar.BigInteger (nullable=True)
 
-class SusWord(ormar.Model):
+class WWPingGroup(ormar.Model):
     class Meta(MainMeta):
-        tablename = 'sus_words'
+        tablename = 'ww_ping_groups'
     
-    id:           int = ormar.Integer    (primary_key=True)
-    server_id:    int = ormar.BigInteger (index=True)
-    regex:        str = ormar.Text       ()
-    auto_delete: bool = ormar.Boolean    ()
+    id:       int = ormar.Integer    (primary_key=True)
+    guild_id: int = ormar.BigInteger (index=True)
+    name:     str = ormar.Text       (allow_blank=False, index=True)
+
+class WWPing(ormar.Model):
+    class Meta(MainMeta):
+        tablename = 'ww_pings'
+
+    id:                      int = ormar.Integer    (primary_key=True)
+    ping_type:               int = ormar.Integer    ()
+    target_id:               int = ormar.BigInteger ()
+    group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='pings')
+
+class WWWatch(ormar.Model):
+    class Meta(MainMeta):
+        tablename = 'ww_watches'
+    
+    id:                           int = ormar.Integer    (primary_key=True)
+    guild_id:                     int = ormar.BigInteger (index=True)
+    pattern:                      str = ormar.Text       (index=True)
+    match_type:                   int = ormar.Integer    ()
+    ping_group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='watches')
+    auto_delete:                 bool = ormar.Boolean    ()
+    ignore_case:                 bool = ormar.Boolean    ()
 
 class BanEvent(ormar.Model):
     class Meta(MainMeta):
