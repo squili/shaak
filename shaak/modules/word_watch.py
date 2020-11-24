@@ -476,29 +476,6 @@ class WordWatch(BaseModule):
                 f'Error removing {"indices" if len(errors) != 1 else "index"} {commas(getrange_s(errors))}')
         else:
             await self.utils.respond(ctx, ResponseLevel.success)
-
-    @commands.command(name='ww.rremove')
-    async def ww_rremove(self, ctx: commands.Context, *ranges: str):
-
-        errors = []
-        offset = 0
-        to_delete = set()
-        for range_ in ranges:
-            lower, upper = [int(i) for i in range_.split('-')]
-            to_delete.update(range(lower, upper+1))
-        
-        indices = sorted(list(to_delete))
-        for index in indices:
-            if await self.remove_watch(ctx, index - offset):
-                errors.append(index)
-            else:
-                offset += 1
-        
-        if errors:
-            await self.utils.respond(ctx, ResponseLevel.general_error,
-                f'Error removing {"indices" if len(errors) != 1 else "index"} {commas(getrange_s(errors))}')
-        else:
-            await self.utils.respond(ctx, ResponseLevel.success)
     
     @commands.command(name='ww.qremove')
     async def ww_qremove(self, ctx: commands.Context, *patterns: str):
