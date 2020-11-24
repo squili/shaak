@@ -1,21 +1,26 @@
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
 import re
-from typing import Optional, Any, Dict, Callable
+import string
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 import discord
 import ormar
-from discord.ext import commands
 from discord.errors import HTTPException
+from discord.ext import commands
 
 from shaak.base_module import BaseModule
 from shaak.checks import has_privlidged_role
-from shaak.consts import ModuleInfo, MatchType, watch_setting_map
-from shaak.database import WWWatch, WWPingGroup, WWPing, Setting, redis
-from shaak.helpers import link_to_message, mention2id, id2mention, MentionType, bold_segments, bool2str, getrange_s, commas, pluralize
-from shaak.utils import ResponseLevel, Utils
+from shaak.consts import MatchType, ModuleInfo, watch_setting_map
+from shaak.database import WWSetting, WWPing, WWPingGroup, WWWatch, WWIgnore, DBGuild
 from shaak.errors import InvalidId
-from shaak.matcher import text_preprocess, pattern_preprocess, word_matches
+from shaak.helpers import (MentionType, between_segments, bool2str, commas,
+                           get_int_ranges, getrange_s, id2mention,
+                           link_to_message, mention2id, pluralize,
+                           resolve_mention)
+from shaak.matcher import pattern_preprocess, text_preprocess, word_matches
+from shaak.settings import product_settings
+from shaak.utils import ResponseLevel, Utils
 
 @dataclass
 class WatchCacheEntry:
@@ -33,7 +38,6 @@ class WatchCacheEntry:
             hash(self.id) + \
             hash(self.match_type) + \
             hash(self.pattern) + \
-            hash(self.compiled) + \
             hash(self.ping_group_id) + \
             hash(self.auto_delete) + \
             hash(self.ignore_case)
@@ -42,7 +46,7 @@ class WordWatch(BaseModule):
     
     meta = ModuleInfo(
         name='word_watch',
-        flag=0b1
+        settings=WWSetting
     )
 
     def __init__(self, *args, **kwargs):
@@ -56,8 +60,8 @@ class WordWatch(BaseModule):
     
     async def add_to_cache(self, watch: WWWatch) -> WatchCacheEntry:
 
-        if watch.guild_id not in self.watch_cache:
-            self.watch_cache[watch.guild_id] = []
+        if watch.guild.id not in self.watch_cache:
+            self.watch_cache[watch.guild.id] = []
         
         cache_entry = WatchCacheEntry(
             id=watch.id,
@@ -80,20 +84,21 @@ class WordWatch(BaseModule):
             await watch.delete()
             return None
 
-        self.watch_cache[watch.guild_id].append(cache_entry)
+        self.watch_cache[watch.guild.id].append(cache_entry)
         return cache_entry
 
     async def initialize(self):
         
         for guild in self.bot.guilds:
             self.watch_cache[guild.id] = []
+            await WWSetting.objects.get_or_create(guild=DBGuild(id=guild.id))
         
         for watch in await WWWatch.objects.all():
-            if watch.guild_id not in self.watch_cache:
+            if watch.guild.id not in self.watch_cache:
                 await watch.delete()
             else:
                 await self.add_to_cache(watch)
-        
+
         await super().initialize()
     
     @commands.Cog.listener()
@@ -103,6 +108,8 @@ class WordWatch(BaseModule):
         
         if guild.id not in self.watch_cache:
             self.watch_cache[guild.id] = []
+        
+        await WWSetting.objects.get_or_create(guild=DBGuild(id=guild.id))
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
@@ -111,13 +118,10 @@ class WordWatch(BaseModule):
         
         if guild.id in self.watch_cache:
             del self.watch_cache[guild.id]
+        
+    async def is_id_ignored(self, guild_id, target_id):
+        return await WWIgnore.objects.filter(guild__id=guild_id, target_id=target_id).limit(1).count() == 1
 
-        await WWWatch.objects.delete(guild_id=guild.id)
-        ping_groups = await WWPingGroup.objects.filter(guild_id=guild.id).all()
-        for group in ping_groups:
-            await WWPing.objects.delete(group=group)
-            await group.delete()
-    
     async def scan_message(self, message: discord.Message):
 
         await self.initialized.wait()
@@ -125,15 +129,25 @@ class WordWatch(BaseModule):
         if message.guild is None:
             return
         
-        if await redis.sismember(self.redis_key(message.guild.id, 'ig_ch'), message.channel.id):
+        if message.author.bot:
+            return
+        
+        if await self.is_id_ignored(message.guild.id, message.channel.id):
             return
 
-        if message.channel.category_id and await redis.sismember(self.redis_key(message.guild.id, 'ig_ch'), message.channel.category_id):
+        if message.channel.category_id and await self.is_id_ignored(message.guild.id, message.channel.category_id):
             return
+        
+        check_member = message.webhook_id == None
+        if isinstance(message.author, discord.User):
+            try:
+                message.author = await message.guild.fetch_member(message.author.id)
+            except discord.HTTPException:
+                check_member = False
 
-        if message.webhook_id == None:
+        if check_member:
             for role in message.author.roles:
-                if await redis.sismember(self.redis_key(message.guild.id, 'ig_rl'), role.id):
+                if await self.is_id_ignored(message.guild.id, role.id):
                     return
         
         delete_message = False
@@ -142,12 +156,12 @@ class WordWatch(BaseModule):
         for watch in self.watch_cache[message.guild.id]:
 
             if watch.match_type == MatchType.regex:
-                found = watch.compiled.findall(message.content)
+                found = list(watch.compiled.finditer(message.content))
                 if found:
                     delete_message = delete_message or watch.auto_delete
                     for match in found:
                         matches.add((
-                            watch.pattern, match.start(0), match.end(0)
+                            watch, match.start(0), match.end(0)
                         ))
 
             elif watch.match_type == MatchType.word:
@@ -158,53 +172,93 @@ class WordWatch(BaseModule):
                     delete_message = delete_message or watch.auto_delete
                     for match in found:
                         matches.add((
-                            watch.pattern, match[0], match[1]
+                            watch, match[0], match[1]
                         ))
 
         if matches:
-            log_channel_id = await redis.get(self.redis_key(message.guild.id, 'log'))
-            if log_channel_id == None:
+            module_settings: WWSetting = await WWSetting.objects.get(guild__id=message.guild.id)
+            if module_settings.log_channel == None:
                 return
                 
-            log_channel = self.bot.get_channel(int(log_channel_id))
+            log_channel = self.bot.get_channel(module_settings.log_channel)
             if log_channel == None:
                 return
-
-            deduped_patterns = set([o[0] for o in matches])
-            pattern_list = commas([f"`{i}`" for i in deduped_patterns])
-
-            description_entries = [
-                bold_segments(message.content, [(i[1], i[2]) for i in matches]),
-                '',
-                f'User: {id2mention(message.author.id, MentionType.user)}',
-                f'Pattern{pluralize("", "s", len(matches))}: {pattern_list}',
-                f'Channel: {id2mention(message.channel.id, MentionType.channel)}',
-                f'Time: {message.created_at.strftime("%d/%m/%y %I:%M:%S %p")}',
-                f'Deleted: {bool2str(delete_message, "yes", "no")}',
-                f'Message: {link_to_message(message)}'
-            ]
             
+            ping_groups = []
+            for match in matches:
+                if match[0].ping_group_id not in ping_groups:
+                    ping_groups.append(match[0].ping_group_id)
+            str_pings = set()
+            for group in ping_groups:
+                pings = await WWPing.objects.filter(group=group).all()
+                for ping in pings:
+                    str_pings.add(id2mention(ping.target_id, ping.ping_type))
+
+            deduped_patterns = set([o[0].pattern for o in matches])
+            pattern_list = commas([str(i) for i in deduped_patterns])
+            pattern_list_code = commas([f"`{i}`" for i in deduped_patterns])
+
+            raw_segments = sorted(list(set(
+                [index                     for range_ in
+                [range(match[1], match[2]+1) for match  in matches]
+                                           for index  in range_]
+            ))) # p y t h o n i c
+            ranges = get_int_ranges(raw_segments)
+
             message_embed = discord.Embed(
                 color=discord.Color(0xd22513),
-                description='\n'.join(description_entries)
+                description='\n'.join([
+                    between_segments(message.content, ranges).replace('](', ']\\('),
+                    f'[Jump to message]({link_to_message(message)})'
+                ]),
+                timestamp=message.created_at
             )
             message_embed.set_author(
                 name=f'{message.author.name}#{message.author.discriminator} triggered {pattern_list} in #{message.channel.name}',
                 icon_url=message.author.avatar_url
             )
+            message_embed.set_footer(text=f'User ID: {message.author.id}', icon_url=message.guild.icon_url)
+            message_embed.add_field(name='User', value=id2mention(message.author.id, MentionType.user), inline=True)
+            message_embed.add_field(name='Channel', value=id2mention(message.channel.id, MentionType.channel), inline=True)
+            message_embed.add_field(name='Deleted', value=bool2str(delete_message, 'Yes', 'No'), inline=True)
+            message_embed.add_field(name='When', value=message.created_at.strftime("%d/%m/%y \u200B \u200B %I:%M:%S %p"), inline=True)
+            message_embed.add_field(name='Pattern' + pluralize("", "s", len(pattern_list_code)),
+                                    value=pattern_list_code, inline=False)
 
-            content = await redis.get(self.redis_key(message.guild.id, 'head'))
+            content = module_settings.header
             if content:
                 content = content.format(
-                    patterns=pattern_list,
+                    patterns=pattern_list_code,
                     channel=message.channel.name,
                     channel_reference=id2mention(message.channel.id, MentionType.channel),
                     user=f'{message.author.name}#{message.author.discriminator}',
                     user_ping=id2mention(message.author.id, MentionType.user),
                     user_id=message.author.id
                 )
+            else:
+                content = ''
+            if str_pings:
+                if content:
+                    content += ' '
+                content += ''.join(str_pings)
+                if len(content) > 2000:
+                    content = content[len(content)-2000:]
 
-            await log_channel.send(content=content, embed=message_embed)
+            try:
+                await log_channel.send(content=content, embed=message_embed)
+            except HTTPException as e:
+                if e.code == 50035:
+                    # fallback
+                    fallback_embed = discord.Embed(
+                        color=discord.Color(0xd22513),
+                        description=f'[Jump to message]({link_to_message(message)})'
+                    )
+                    fallback_embed.set_author(
+                        name=f'{message.author.name}#{message.author.discriminator} triggered Word Watch in #{message.channel.name}',
+                        icon_url=message.author.avatar_url
+                    )
+                    fallback_embed.set_footer(text=f'Fallback embed • Ping {product_settings.author_name}!')
+                    await log_channel.send(content=content, embed=fallback_embed)
 
     async def after_invoke_hook(self, ctx: commands.Context):
 
@@ -219,9 +273,15 @@ class WordWatch(BaseModule):
         if isinstance(message.channel, (discord.DMChannel, discord.GroupChannel)):
             return
 
-        server_prefix = await self.bot.command_prefix(self.bot, message)
-        if not message.content.startswith(server_prefix):
+        guild_prefix = await self.bot.command_prefix(self.bot, message)
+        if not message.content.startswith(guild_prefix):
             await self.scan_message(message)
+    
+    @commands.Cog.listener()
+    async def on_message_edit(self, old: discord.Message, new: discord.Message):
+
+        if old.content != new.content:
+            await self.on_message(new)
 
     @commands.command(name='ww.watch')
     async def ww_watch(self, ctx: commands.Context, watch_settings: str, *patterns: str):
@@ -270,7 +330,7 @@ class WordWatch(BaseModule):
             try:
                 ping_group = await WWPingGroup.objects.get(
                     guild_id=ctx.guild.id,
-                    name=parsed_settings['head']
+                    name=parsed_settings['ping']
                 )
             except ormar.NoMatch:
                 await self.utils.respond(ctx, ResponseLevel.general_error, f'Invalid ping group {parsed_settings["ping"]}')
@@ -281,15 +341,16 @@ class WordWatch(BaseModule):
         duplicates = 0
         updates = 0
         additions = 0
+        db_guild = await DBGuild.objects.get(id=ctx.guild.id)
         for pattern in patterns:
             try:
                 existing = await WWWatch.objects.get(
-                    guild_id=ctx.guild.id,
+                    guild=db_guild,
                     pattern=pattern
                 )
             except ormar.NoMatch:
                 added = await WWWatch.objects.create(
-                    guild_id=ctx.guild.id,
+                    guild=db_guild,
                     pattern=pattern,
                     match_type=parsed_settings['type'].value,
                     ping_group=ping_group,
@@ -330,13 +391,17 @@ class WordWatch(BaseModule):
         
         message_parts = []
         if additions:
-            message_parts.append(f'Added {additions} new word{pluralize("", "s", additions)}.')
+            message_parts.append(f'added {additions} new word{pluralize("", "s", additions)}')
         if updates:
-            message_parts.append(f'Updated {updates} existing word{pluralize("", "s", updates)}.')
+            message_parts.append(f'updated {updates} existing word{pluralize("", "s", updates)}')
         if duplicates:
-            message_parts.append(f'Ignored {duplicates} duplicate word{pluralize("", "s", duplicates)}.')
+            message_parts.append(f'ignored {duplicates} duplicate word{pluralize("", "s", duplicates)}')
         
-        await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts))
+        await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
+
+        module_settings: WWSetting = await WWSetting.objects.get(guild__id=ctx.guild.id)
+        if module_settings.log_channel == None:
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'WARNING: You have no log channel set, so nothing will be logged!')
     
     async def list_words(self, ctx: commands.Context, filter_lambda: Optional[Callable] = None):
 
@@ -362,13 +427,14 @@ class WordWatch(BaseModule):
     async def ww_clear_watches(self, ctx: commands.Context):
 
         if ctx.guild.id in self.watch_cache:
-            await WWWatch.objects.delete(guild_id=ctx.guild.id)
+            to_delete = await WWWatch.objects.filter(guild__id=ctx.guild.id).all()
+            [await watch.delete() for watch in to_delete]
             self.watch_cache[ctx.guild.id] = []
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
             await self.utils.respond(ctx, ResponseLevel.internal_error, 'I have no idea where I am')
     
-    async def remove_word(self, ctx: commands.Context, index: int) -> bool:
+    async def remove_watch(self, ctx: commands.Context, index: int) -> bool:
 
         try:
             cache_entry: WatchCacheEntry = self.watch_cache[ctx.guild.id][index-1]
@@ -386,12 +452,21 @@ class WordWatch(BaseModule):
         return False
 
     @commands.command(name='ww.remove')
-    async def ww_remove(self, ctx: commands.Context, *indexes: int):
+    async def ww_remove(self, ctx: commands.Context, *ranges: str):
 
+        to_delete = set()
+        for range_ in ranges:
+            if '-' in range_:
+                lower, upper = [int(i) for i in range_.split('-')]
+                to_delete.update(range(lower, upper+1))
+            else:
+                to_delete.add(int(range_))
+
+        indices = sorted(list(to_delete))
         errors = []
         offset = 0
-        for index in indexes:
-            if await self.remove_word(ctx, index - offset):
+        for index in indices:
+            if await self.remove_watch(ctx, index - offset):
                 errors.append(index)
             else:
                 offset += 1
@@ -411,9 +486,10 @@ class WordWatch(BaseModule):
         for range_ in ranges:
             lower, upper = [int(i) for i in range_.split('-')]
             to_delete.update(range(lower, upper+1))
-
-        for index in to_delete:
-            if await self.remove_word(ctx, index - offset):
+        
+        indices = sorted(list(to_delete))
+        for index in indices:
+            if await self.remove_watch(ctx, index - offset):
                 errors.append(index)
             else:
                 offset += 1
@@ -434,13 +510,12 @@ class WordWatch(BaseModule):
                 watch = await WWWatch.objects.get(guild_id=ctx.guild.id, pattern=pattern)
             except ormar.NoMatch:
                 errors.append(pattern)
-                continue
-            
-            await watch.delete()
-            for index, item in enumerate(self.watch_cache[ctx.guild.id]):
-                if item.id == watch.id:
-                    del self.watch_cache[ctx.guild.id][index]
-                    break
+            else:
+                await watch.delete()
+                for index, item in enumerate(self.watch_cache[ctx.guild.id]):
+                    if item.id == watch.id:
+                        del self.watch_cache[ctx.guild.id][index]
+                        break
 
         if errors:
             await self.utils.respond(ctx, ResponseLevel.general_error,
@@ -449,81 +524,190 @@ class WordWatch(BaseModule):
             await self.utils.respond(ctx, ResponseLevel.success)
 
     @commands.command(name='ww.ignore')
-    async def ww_ignore(self, ctx: commands.Context, reference_type: str, *references: str):
+    async def ww_ignore(self, ctx: commands.Context, *references: str):
 
-        if reference_type not in ['role', 'channel']:
-            await self.utils.respond(ctx, ResponseLevel.general_error, 'Invalid reference type')
-            return
+        db_guild: DBGuild = await DBGuild.objects.get(id=ctx.guild.id)
 
-        for reference in references:
-            if reference_type == 'channel':
-                await redis.sadd(self.redis_key(ctx.guild.id, 'ig_ch'), mention2id(reference, MentionType.channel))
+        errors = []
+        duplicates = 0
+        for index, reference in enumerate(references):
+            try:
+                id = int(reference)
+            except ValueError:
+                mention_type, id = resolve_mention(reference)
             else:
-                await redis.sadd(self.redis_key(ctx.guild.id, 'ig_rl'), mention2id(reference, MentionType.role))
+                mention_type = await self.utils.guess_id(id, ctx.guild)
+            if mention_type in [MentionType.channel, MentionType.role]:
+                if await self.is_id_ignored(ctx.guild.id, id):
+                    duplicates += 1
+                else:
+                    await WWIgnore.objects.create(guild=db_guild, target_id=id, mention_type=mention_type)
+            else:
+                errors.append(index+1)
 
-        await self.utils.respond(ctx, ResponseLevel.success)
+        if len(errors) > 0:
+            await self.utils.respond(ctx, ResponseLevel.general_error,
+                f'Error ignoring item{pluralize("", "s", len(errors))} {commas(getrange_s(errors))}')
+        else:
+            if duplicates > 0:
+                await self.utils.respond(ctx, ResponseLevel.success, f'Skipped {duplicates} duplicates')
+            else:
+                await self.utils.respond(ctx, ResponseLevel.success)
 
     @commands.command(name='ww.ignored')
     async def ww_ignored(self, ctx: commands.Context):
         
-        ignored_channels = await redis.smembers(self.redis_key(ctx.guild.id, 'ig_ch'))
-        ignored_roles = await redis.smembers(self.redis_key(ctx.guild.id, 'ig_rl'))
-        if len(ignored_channels) + len(ignored_roles) == 0:
+        ignored = await WWIgnore.objects.filter(guild__id=ctx.guild.id).all()
+        if len(ignored) == 0:
             await self.utils.respond(ctx, ResponseLevel.success, 'Nothing ignored')
             return
         await self.utils.list_items(ctx,
-            [id2mention(i, MentionType.channel) for i in ignored_channels] + \
-            [id2mention(i, MentionType.role)    for i in ignored_roles]
+            [id2mention(ignore.target_id, ignore.mention_type) for ignore in ignored]
         )
     
     @commands.command(name='ww.unignore')
     async def ww_unignore(self, ctx: commands.Context, *references: str):
 
-        for reference in references:
+        errors = []
+        for index, reference in enumerate(references):
             try:
                 id = mention2id(reference, MentionType.channel)
             except InvalidId:
                 id = mention2id(reference, MentionType.role)
-            await redis.srem(self.redis_key(ctx.guild.id, 'ig_ch'), id)
-            await redis.srem(self.redis_key(ctx.guild.id, 'ig_rl'), id)
-        await self.utils.respond(ctx, ResponseLevel.success)
+            try:
+                target_ignore = await WWIgnore.objects.get(target_id=id)
+            except ormar.NoMatch:
+                errors.append(index+1)
+            else:
+                await target_ignore.delete()
+
+        if len(errors) > 0:
+            await self.utils.respond(ctx, ResponseLevel.general_error,
+                f'Item{pluralize("", "s", len(errors))} {commas(getrange_s(errors))} not found')
+        else:
+            await self.utils.respond(ctx, ResponseLevel.success)
 
     @commands.command(name='ww.log')
     async def ww_log(self, ctx: commands.Context, channel_reference: Optional[str] = None):
 
+        module_settings: WWSetting = await WWSetting.objects.get(guild__id=ctx.guild.id)
         if channel_reference:
-            channel_id = mention2id(channel_reference, MentionType.channel)
-            await redis.set(self.redis_key(ctx.guild.id, 'log'), channel_id)
+            if channel_reference in ['clear', 'reset', 'disable']:
+                await module_settings.update(log_channel=None)
+            else:
+                try:
+                    channel_id = int(channel_reference)
+                except ValueError:
+                    channel_id = mention2id(channel_reference, MentionType.channel)
+                await module_settings.update(log_channel=channel_id)
+            await self.utils.respond(ctx, ResponseLevel.success)
         else:
-            await redis.delete(self.redis_key(ctx.guild.id, 'log'))
-        await self.utils.respond(ctx, ResponseLevel.success)
+            if module_settings.log_channel == None:
+                response = 'No log channel set'
+            else:
+                response = id2mention(module_settings.log_channel, MentionType.channel)
+            await self.utils.respond(ctx, ResponseLevel.success, response)
 
     @commands.command(name='ww.header')
     async def ww_header(self, ctx: commands.Context, *, header_message: Optional[str] = None):
 
+        module_settings: WWSetting = await WWSetting.objects.get(guild__id=ctx.guild.id)
         if header_message:
-            await redis.set(self.redis_key(ctx.guild.id, 'head'), header_message)
+            if header_message in ['clear', 'reset', 'disable']:
+                await module_settings.update(header=None)
+            else:
+                await module_settings.update(header=header_message)
+            await self.utils.respond(ctx, ResponseLevel.success)
         else:
-            await redis.delete(self.redis_key(ctx.guild.id, 'head'))
-        await self.utils.respond(ctx, ResponseLevel.success)
+            await self.utils.respond(ctx, ResponseLevel.success, module_settings.header or 'No header set')
     
     @commands.command(name='ww.add_ping')
     async def ww_add_ping(self, ctx: commands.Context, group_name: str, ping: str):
+        
+        for not_allowed in string.whitespace + '.':
+            if not_allowed in group_name:
+                await self.utils.respond(ctx, ResponseLevel.general_error, 'Illegal character in group name')
 
-        # TODO: implement
-
-        await self.utils.respond(ctx, ResponseLevel.forbidden, 'Not implemented yet')
+        try:
+            id = int(ping)
+        except ValueError:
+            mention_type, id = resolve_mention(ping)
+        else:
+            mention_type = await self.utils.guess_id(id, ctx.guild)
+        
+        if mention_type == None:
+            await self.utils.respond(ctx, ResponseLevel.general_error, "Couldn't resolve mention")
+        else:
+            group: WWPingGroup = await WWPingGroup.objects.get_or_create(guild_id=ctx.guild.id, name=group_name)
+            pings = await WWPing.objects.filter(group=group).all()
+            for db_ping in pings:
+                if db_ping.target_id == id:
+                    await self.utils.respond(ctx, ResponseLevel.general_error, 'Duplicate ping')
+                    break
+            else:
+                await WWPing.objects.create(
+                    ping_type=mention_type,
+                    target_id=id,
+                    group=group
+                )
+                await self.utils.respond(ctx, ResponseLevel.success)
     
     @commands.command(name='ww.remove_ping')
     async def ww_remove_ping(self, ctx: commands.Context, group_name: str, ping: str):
+        
+        try:
+            id = int(ping)
+        except ValueError:
+            _, id = resolve_mention(ping)
 
-        # TODO: implement
-
-        await self.utils.respond(ctx, ResponseLevel.forbidden, 'Not implemented yet')
+        if id == None:
+            await self.utils.respond(ctx, ResponseLevel.general_error, "Couldn't resolve mention")
+        else:
+            try:
+                group: WWPingGroup = await WWPingGroup.objects.get(guild_id=ctx.guild.id, name=group_name)
+            except ormar.NoMatch:
+                await self.utils.respond(ctx, ResponseLevel.general_error, 'Group not found')
+            pings = await WWPing.objects.filter(group=group).all()
+            for db_ping in pings:
+                if db_ping.target_id == id:
+                    await db_ping.delete()
+                    await self.utils.respond(ctx, ResponseLevel.success)
+                    break
+            else:
+                await self.utils.respond(ctx, ResponseLevel.general_error, 'Ping not found in group')
     
     @commands.command(name='ww.delete_group')
     async def ww_delete_group(self, ctx: commands.Context, group_name: str):
 
-        # TODO: implement
+        try:
+            group: WWPingGroup = await WWPingGroup.objects.get(guild_id=ctx.guild.id, name=group_name)
+        except ormar.NoMatch:
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'Group not found')
+        else:
+            await group.delete()
+            await self.utils.respond(ctx, ResponseLevel.success)
+    
+    @commands.command(name='ww.list_groups')
+    async def ww_list_groups(self, ctx: commands.Context):
 
-        await self.utils.respond(ctx, ResponseLevel.forbidden, 'Not implemented yet')
+        groups: List[WWPingGroup] = await WWPingGroup.objects.filter(guild_id=ctx.guild.id).all()
+        entries = []
+        for group in groups:
+            ping_count = await WWPing.objects.filter(group=group).count()
+            entries.append(f'{group.name} ({ping_count} ping{pluralize("", "s", ping_count)})')
+        if len(entries) == 0:
+            await self.utils.respond(ctx, ResponseLevel.success, 'No groups found')
+        else:
+            await self.utils.list_items(ctx, entries)
+    
+    @commands.command(name='ww.list_pings')
+    async def ww_list_pings(self, ctx: commands.Context, group_name: str):
+
+        pings = await WWPing.objects.filter(group__name=group_name).all()
+        entries = []
+        for ping in pings:
+            entries.append(id2mention(ping.target_id, ping.ping_type))
+        if len(entries) == 0:
+            await self.utils.respond(ctx, ResponseLevel.success, 'No pings found')
+        else:
+            await self.utils.list_items(ctx, entries)

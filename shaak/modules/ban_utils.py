@@ -9,7 +9,7 @@ from discord.ext import commands
 
 from shaak.base_module import BaseModule
 from shaak.consts import ModuleInfo, ResponseLevel, color_red, PseudoId
-from shaak.database import redis, BanEvent, Setting
+from shaak.database import BUEvent, Setting
 from shaak.helpers import uuid2b64, b642uuid, id2mention, MentionType, check_privildged
 from shaak.checks import has_privlidged_role
 
@@ -17,7 +17,7 @@ class BanUtils(BaseModule):
     
     meta = ModuleInfo(
         name='ban_utils',
-        flag=0b01
+        settings=None
     )
     
     def __init__(self, *args, **kwargs):
@@ -30,7 +30,7 @@ class BanUtils(BaseModule):
     async def initialize(self):
         await super().initialize()
     
-    async def update_ban_message(self, ban_event: BanEvent):
+    async def update_ban_message(self, ban_event: BUEvent):
 
         guild = self.bot.get_guild(ban_event.guild_id)
         channel = guild.get_channel(ban_event.message_channel)
@@ -88,22 +88,22 @@ class BanUtils(BaseModule):
             ban_entry = await guild.fetch_ban(user)
             ban_reason = ban_entry.reason
         
-        server_settings: Setting = await Setting.objects.get(server_id=guild.id)
-        if server_settings.log_channel == None:
+        guild_settings: Setting = await Setting.objects.get(guild__id=guild.id)
+        if guild_settings.log_channel == None:
             return
         
-        new_message = await guild.get_channel(server_settings.log_channel).send(
+        new_message = await guild.get_channel(guild_settings.log_channel).send(
             embed=discord.Embed(
                 color=color_red,
                 description='Processing ban...'
             )
         )
 
-        ban_event = await BanEvent.objects.create(
+        ban_event = await BUEvent.objects.create(
             id=uuid.uuid4(),
             guild_id=guild.id,
             message_id=new_message.id,
-            message_channel=server_settings.log_channel,
+            message_channel=guild_settings.log_channel,
             target_id=user.id,
             banner_id=ban_user_id,
             ban_reason=ban_reason or 'No reason given'
@@ -136,7 +136,7 @@ class BanUtils(BaseModule):
         
         event_id = embed.footer.text
         try:
-            ban_event = await BanEvent.objects.get(id=b642uuid(event_id))
+            ban_event = await BUEvent.objects.get(id=b642uuid(event_id))
         except (ValueError, ormar.NoMatch):
             return
         
@@ -173,17 +173,9 @@ class BanUtils(BaseModule):
         await message.remove_reaction(payload.emoji, self.bot.user)
         await self.update_ban_message(ban_event)
         
-    @commands.Cog.listener()
-    async def on_guild_remove(self, guild: discord.Guild):
-        
-        await self.initialized.wait()
-
-        # delete ban events
-        await BanEvent.objects.delete(server_id=guild.id)
-
     # debug
     @commands.command('bu.reload')
     async def reload(self, ctx: commands.Context, event_id: str):
 
-        ban_event = await BanEvent.objects.get(id=b642uuid(event_id))
+        ban_event = await BUEvent.objects.get(id=b642uuid(event_id))
         await self.update_ban_message(ban_event)

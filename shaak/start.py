@@ -2,7 +2,7 @@ import asyncio
 
 import discord
 
-from shaak.custom_bot import CustomBot
+from shaak.custom_bot import CustomBot, CustomHelpCommand
 from shaak.database import (get_command_prefix,
                             start_database)
 from shaak.manager import Manager
@@ -25,15 +25,17 @@ def start_bot():
     intents.guild_messages = True # bot supports dms, but currently has no reason to subscribe to them
     intents.reactions = True
     intents.bans = True
+    intents.voice_states = True # hopefully this populates our cache enough
     member_cache_flags = discord.MemberCacheFlags(
         online=False,
-        voice=False,
+        voice=True,
         joined=False
     )
 
     # create bot
     bot = CustomBot(
         command_prefix=get_command_prefix,
+        help_command=CustomHelpCommand(),
         intents=intents,
         member_cache_flags=member_cache_flags
     )

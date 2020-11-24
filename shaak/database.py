@@ -3,7 +3,6 @@ import dataclasses
 import json
 from typing import Optional, List
 
-import aredis
 import databases
 import discord
 import ormar
@@ -15,12 +14,6 @@ from shaak.settings import app_settings
 
 database = databases.Database(app_settings.database_url)
 metadata = sqlalchemy.MetaData()
-redis = aredis.StrictRedis(
-                host = app_settings.redis_host,
-                port = app_settings.redis_port,
-                  db = app_settings.redis_db,
-    decode_responses = True
-)
 
 class MainMeta(ormar.ModelMeta):
     metadata = metadata
@@ -40,61 +33,83 @@ class GlobalSetting(ormar.Model):
     # misc
     secret_key:      int = ormar.BigInteger ()
 
+class DBGuild(ormar.Model):
+    class Meta(MainMeta):
+        tablename = 'guilds'
+    
+    id: int = ormar.BigInteger (primary_key=True, autoincrement=False, unique=False)
+
 class Setting(ormar.Model):
     class Meta(MainMeta):
         tablename = 'settings'
     
-    # internal
-    server_id:          int = ormar.BigInteger (primary_key=True, autoincrement=False, unique=True)
-    enabled_modules:    int = ormar.Integer    (default=0b0)
+    id:                  int = ormar.Integer    (primary_key=True)
+    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='settings', ondelete='CASCADE')
+    command_prefix:      str = ormar.Text       (nullable=True)
+    verbose_errors:     bool = ormar.Boolean    (nullable=True)
+    authenticated_role:  int = ormar.BigInteger (nullable=True)
+
+class WWSetting(ormar.Model):
+    class Meta(MainMeta):
+        tablename = 'ww_settings'
     
-    # general
-    command_prefix:     str = ormar.Text       (nullable=True)
-    verbose_errors:    bool = ormar.Boolean    (nullable=True)
-    authenticated_role: int = ormar.BigInteger (nullable=True)
+    id:                  int = ormar.Integer    (primary_key=True)
+    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='ww_settings', ondelete='CASCADE')
+    enabled:            bool = ormar.Boolean    (default=False)
+    log_channel:         int = ormar.BigInteger (nullable=True)
+    header:              str = ormar.Text       (nullable=True)
 
 class WWPingGroup(ormar.Model):
     class Meta(MainMeta):
         tablename = 'ww_ping_groups'
     
-    id:       int = ormar.Integer    (primary_key=True)
-    guild_id: int = ormar.BigInteger (index=True)
-    name:     str = ormar.Text       (allow_blank=False, index=True)
+    id:                  int = ormar.Integer    (primary_key=True)
+    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='ping_groups', ondelete='CASCADE')
+    name:                str = ormar.Text       (allow_blank=False, index=True)
 
 class WWPing(ormar.Model):
     class Meta(MainMeta):
         tablename = 'ww_pings'
 
     id:                      int = ormar.Integer    (primary_key=True)
-    ping_type:               int = ormar.Integer    ()
+    ping_type:               str = ormar.String     (max_length=2)
     target_id:               int = ormar.BigInteger ()
-    group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='pings')
+    group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='pings', ondelete='CASCADE')
 
 class WWWatch(ormar.Model):
     class Meta(MainMeta):
         tablename = 'ww_watches'
     
     id:                           int = ormar.Integer    (primary_key=True)
-    guild_id:                     int = ormar.BigInteger (index=True)
+    guild:          Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='watches', ondelete='CASCADE')
     pattern:                      str = ormar.Text       (index=True)
     match_type:                   int = ormar.Integer    ()
-    ping_group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='watches')
+    ping_group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='watches', ondelete='SET NULL')
     auto_delete:                 bool = ormar.Boolean    ()
     ignore_case:                 bool = ormar.Boolean    ()
 
-class BanEvent(ormar.Model):
+class WWIgnore(ormar.Model):
     class Meta(MainMeta):
-        tablename = 'ban_events'
+        tablename = 'ww_ignores'
+    
+    id:                  int = ormar.Integer    (primary_key=True)
+    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='ignores', ondelete='CASCADE')
+    target_id:           int = ormar.BigInteger (index=True, unqiue=True)
+    mention_type:        str = ormar.String     (max_length=2)
 
-    id:        uuid.UUID = ormar.UUID       (primary_key=True, unique=True)
-    guild_id:        int = ormar.BigInteger (index=True)
-    message_id:      int = ormar.BigInteger ()
-    message_channel: int = ormar.BigInteger ()
-    target_id:       int = ormar.BigInteger ()
-    banner_id:       int = ormar.BigInteger (nullable=True)
-    ban_reason:      str = ormar.Text       ()
-    reported:       bool = ormar.Boolean    (default=False)
-    unbanned:       bool = ormar.Boolean    (default=False)
+class BUEvent(ormar.Model):
+    class Meta(MainMeta):
+        tablename = 'bu_events'
+
+    id:            uuid.UUID = ormar.UUID       (primary_key=True, unique=True)
+    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='bu_events', ondelete='CASCADE')
+    message_id:          int = ormar.BigInteger ()
+    message_channel:     int = ormar.BigInteger ()
+    target_id:           int = ormar.BigInteger ()
+    banner_id:           int = ormar.BigInteger (nullable=True)
+    ban_reason:          str = ormar.Text       ()
+    reported:           bool = ormar.Boolean    (default=False)
+    unbanned:           bool = ormar.Boolean    (default=False)
 
 async def start_database():
     
@@ -104,8 +119,8 @@ async def get_command_prefix(bot: commands.Bot, message: discord.Message) -> str
     
     await bot.manager_ready.wait()
     if message.guild != None:
-        server_settings: Setting = await Setting.objects.get(server_id=message.guild.id)
-        if server_settings.command_prefix:
-            return server_settings.command_prefix
+        guild_settings: Setting = await Setting.objects.get(guild__id=message.guild.id)
+        if guild_settings.command_prefix:
+            return guild_settings.command_prefix
     global_settings: GlobalSetting = await GlobalSetting.objects.get(id=0)
     return global_settings.command_prefix

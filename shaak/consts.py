@@ -1,6 +1,7 @@
 import dataclasses
 from enum import Enum
 
+import ormar
 import discord
 from discord.ext import commands
 
@@ -15,8 +16,8 @@ class ResponseLevel(Enum):
 
 @dataclasses.dataclass
 class ModuleInfo:
-    name:  str
-    flag:  int
+    name:     str
+    settings: ormar.Model
 
 class PseudoId:
     

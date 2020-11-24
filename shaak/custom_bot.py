@@ -43,3 +43,9 @@ class CustomBot(commands.Bot):
         else:
             await self.utils.respond(ctx, ResponseLevel.internal_error, f'Unhandled error of type {type(error).__name__}. Check the console!')
             raise error
+
+class CustomHelpCommand(commands.HelpCommand):
+
+    async def command_callback(self, ctx: commands.Context):
+        await ctx.send('You are beyond help.')
+    

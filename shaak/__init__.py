@@ -28,10 +28,7 @@ def initialize_bot():
         setting_names = [
             [ 'token',        str ],
             [ 'database_url', str ],
-            [ 'status',       str ],
-            [ 'redis_host',   str ],
-            [ 'redis_port',   int ],
-            [ 'redis_db',     int ]
+            [ 'status',       str ]
         ]
 
         try:

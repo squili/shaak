@@ -29,9 +29,6 @@ class AppSettings:
     token:        str
     database_url: str
     status:       str
-    redis_host:   str
-    redis_port:   int
-    redis_db:     int
 
 @dataclasses.dataclass
 class ProductSettings:
@@ -43,14 +40,11 @@ class ProductSettings:
     author_page:   str
     author_donate: str
 
-raw_settings = load_from_file('settings.json', ['token', 'database_url', 'status', 'redis_host', 'redis_port', 'redis_db'])
+raw_settings = load_from_file('settings.json', ['token', 'database_url', 'status'])
 app_settings = AppSettings(
     token        = raw_settings['token'],
     database_url = raw_settings['database_url'],
-    status       = raw_settings['status'],
-    redis_host   = raw_settings['redis_host'],
-    redis_port   = raw_settings['redis_port'],
-    redis_db     = raw_settings['redis_db']
+    status       = raw_settings['status']
 )
 
 raw_product = load_from_file('product.json', ['bot_name', 'bot_version', 'author_name', 'author_page', 'bot_repo', 'author_donate'])

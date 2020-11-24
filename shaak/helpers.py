@@ -12,7 +12,7 @@ from discord.ext import commands
 from shaak.errors import InvalidId
 from shaak.database import Setting
 
-T = TypeVar('T')
+_T = TypeVar('T')
 
 def chunks(lst: List[Any], size: int):
     size = max(1, size)
@@ -24,12 +24,6 @@ def link_to_message(msg: discord.Message):
 def all_str(iterator):
     for item in iterator:
         yield str(item)
-
-def redis_key(module_name: str, *args: str):
-
-    tmp = ['shaak', module_name]
-    tmp.extend(args)
-    return ':'.join(all_str(tmp))
 
 def str2bool(msg: str) -> Optional[bool]:
     
@@ -95,18 +89,18 @@ def b642uuid(inp: str) -> uuid.UUID:
 
 async def check_privildged(guild: discord.Guild, member: discord.Member):
 
-    server_settings: Setting = await Setting.objects.get(server_id=guild.id)
+    guild_settings: Setting = await Setting.objects.get(guild__id=guild.id)
 
-    if server_settings.authenticated_role == None:
+    if guild_settings.authenticated_role == None:
         return None
 
     for role in member.roles:
-        if role.id == server_settings.authenticated_role:
+        if role.id == guild_settings.authenticated_role:
             return True
     else:
         return False
     
-def bold_segments(source: str, segments: List[Tuple[int]]) -> str:
+def between_segments(source: str, segments: List[Tuple[int]], char: str = '`') -> str:
 
     processed = []
     for segment in segments:
@@ -115,13 +109,13 @@ def bold_segments(source: str, segments: List[Tuple[int]]) -> str:
     offset = 0
     result = source
     for range_ in ranges:
-        result = bold_segment(result, range_[0] + offset, range_[1] + offset + 1)
-        offset += 4
+        result = between_segment(result, range_[0] + offset, range_[1] + offset + 1, char)
+        offset += len(char)*2
     return result
 
-def bold_segment(source: str, start: int, end: int) -> str:
+def between_segment(source: str, start: int, end: int, char: str = '`') -> str:
 
-    return source[:start] + '**' + source[start:end] + '**' + source[end:]
+    return source[:start] + char + source[start:end] + char + source[end:]
 
 def platform_info() -> str:
 
@@ -173,5 +167,12 @@ def pluralize(single: str, plural: str, length: int) -> str:
         return single
     return plural
 
-def pass_value(value: T) -> T:
+def pass_value(value: _T) -> _T:
     return value
+
+def resolve_mention(message: str) -> Optional[Tuple[MentionType, int]]:
+
+    for potential_type in (MentionType.channel, MentionType.user, MentionType.role):
+        if message.startswith('<' + potential_type):
+            return potential_type, mention2id(message, potential_type)
+    return None, None
