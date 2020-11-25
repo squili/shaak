@@ -5,7 +5,7 @@ import discord
 import ormar
 from discord.ext import commands
 
-from shaak.checks     import has_privlidged_role
+from shaak.checks     import has_privlidged_role_check
 from shaak.consts     import ModuleInfo, ResponseLevel, setting_structure
 from shaak.database   import Setting, DBGuild
 from shaak.settings   import app_settings
@@ -34,7 +34,6 @@ class Manager(commands.Cog):
         self.modules[cls.meta.name] = cls.meta
         self.added_cogs.append(loaded_cog)
 
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role())
     async def cog_check(self, ctx: commands.Context):
 
         if ctx.guild is None:
@@ -90,6 +89,7 @@ class Manager(commands.Cog):
         print(f'Removed from guild {guild.name} ({guild.id})')
 
     @commands.command('modules.enable')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def modules_enable(self, ctx: commands.Context, module_name: str):
         
         if module_name in self.modules:
@@ -100,6 +100,7 @@ class Manager(commands.Cog):
             await self.utils.respond(ctx, ResponseLevel.general_error, f'Module `{module_name}` not found')
         
     @commands.command('modules.disable')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def modules_disable(self, ctx: commands.Context, module_name: str):
         
         if module_name in self.modules:
@@ -110,6 +111,7 @@ class Manager(commands.Cog):
             await self.utils.respond(ctx, ResponseLevel.general_error, f'Module `{module_name}` not found')
     
     @commands.command('modules.list')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def modules_list(self, ctx: commands.Context):
         
         entries = []
@@ -119,6 +121,7 @@ class Manager(commands.Cog):
         await self.utils.list_items(ctx, entries)
     
     @commands.command('settings.set')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def settings_set(self, ctx: commands.Context, setting_name: str, *args):
 
         setting_value = ' '.join(args) or None
@@ -133,6 +136,7 @@ class Manager(commands.Cog):
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Invalid setting name')
 
     @commands.command('settings.list')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def settings_list(self, ctx: commands.Context):
         
         guild_settings: Setting = await Setting.objects.get(guild__id=ctx.guild.id)

@@ -14,12 +14,10 @@ class BaseModule(commands.Cog):
         settings=None
     )
 
-    extra_checks = []
-
     def __init__(self, bot: CustomBot):
         
-        self.bot     = bot
-        self.utils   = bot.get_cog('Utils')
+        self.bot          = bot
+        self.utils        = bot.get_cog('Utils')
         if self.utils == None:
             raise RuntimeError('Failed getting Utils cog')
         self.initialized = asyncio.Event()
@@ -33,10 +31,6 @@ class BaseModule(commands.Cog):
         if isinstance(error, ModuleDisabled):
             await self.utils.respond(ctx, ResponseLevel.module_disabled, f'Module {type(self).meta.name} disabled!')
     
-    def extra_check(self, new_check):
-        self.extra_checks.append(new_check)
-    
-    @commands.check_any(*extra_checks)
     async def cog_check(self, ctx: commands.Context):
 
         if ctx.guild is None:
