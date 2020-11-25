@@ -65,15 +65,18 @@ class Utils(commands.Cog):
         
             await message.add_reaction(response_emoji)
     
-    async def list_items(self, ctx: commands.Context, items: List[str]):
+    async def list_items(self, ctx: commands.Context, items: List[str], escape: bool = False):
 
         if len(items) == 0:
             return
         
         pages = chunks(items, 10)
         page_index = 0
+        text = '\n'.join([item for item in pages[page_index]])
+        if escape:
+            text = f'```{text}```'
         embed = discord.Embed(
-            description='```' + '\n'.join([item for item in pages[page_index]]) + '```'
+            description=text
         )
         if len(pages) > 1:
             embed.set_footer(text=f'1/{len(pages)}')
@@ -107,8 +110,11 @@ class Utils(commands.Cog):
                     page_index = 0
                 elif reaction_string == '⏩':
                     page_index = len(pages) - 1
+                text = '\n'.join([item for item in pages[page_index]])
+                if escape:
+                    text = f'```{text}```'
                 embed = discord.Embed(
-                    description='```' + '\n'.join([item for item in pages[page_index]]) + '```'
+                    description=text
                 )
                 embed.set_footer(text=f'{page_index+1}/{len(pages)}')
                 await new_message.edit(embed=embed)

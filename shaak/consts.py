@@ -1,4 +1,4 @@
-import dataclasses
+from dataclasses import dataclass
 from enum import Enum
 
 import ormar
@@ -14,10 +14,15 @@ class ResponseLevel(Enum):
     forbidden       = 3
     module_disabled = 4
 
-@dataclasses.dataclass
+@dataclass
 class ModuleInfo:
     name:     str
     settings: ormar.Model
+
+@dataclass
+class TaskInfo:
+    name:      str
+    wait_time: float
 
 class PseudoId:
     

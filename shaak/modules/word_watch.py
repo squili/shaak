@@ -2,25 +2,25 @@
 import re
 import string
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing      import Any, Callable, Dict, List, Optional
 
 import discord
 import ormar
 from discord.errors import HTTPException
-from discord.ext import commands
+from discord.ext    import commands
 
 from shaak.base_module import BaseModule
-from shaak.checks import has_privlidged_role
-from shaak.consts import MatchType, ModuleInfo, watch_setting_map
-from shaak.database import WWSetting, WWPing, WWPingGroup, WWWatch, WWIgnore, DBGuild
-from shaak.errors import InvalidId
-from shaak.helpers import (MentionType, between_segments, bool2str, commas,
-                           get_int_ranges, getrange_s, id2mention,
-                           link_to_message, mention2id, pluralize,
-                           resolve_mention)
-from shaak.matcher import pattern_preprocess, text_preprocess, word_matches
-from shaak.settings import product_settings
-from shaak.utils import ResponseLevel, Utils
+from shaak.checks      import has_privlidged_role
+from shaak.consts      import MatchType, ModuleInfo, watch_setting_map
+from shaak.database    import WWSetting, WWPing, WWPingGroup, WWWatch, WWIgnore, DBGuild
+from shaak.errors      import InvalidId
+from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
+                               get_int_ranges, getrange_s, id2mention,
+                               link_to_message, mention2id, pluralize,
+                               resolve_mention)
+from shaak.matcher     import pattern_preprocess, text_preprocess, word_matches
+from shaak.settings    import product_settings
+from shaak.utils       import ResponseLevel, Utils
 
 @dataclass
 class WatchCacheEntry:
@@ -422,7 +422,7 @@ class WordWatch(BaseModule):
         
         await self.utils.list_items(ctx, [
             f'{index+1}: {watch.pattern}' for index, watch in enumerate(filtered)
-        ])
+        ], escape=True)
     
     @commands.command(name='ww.list')
     async def ww_list(self, ctx: commands.Context):
@@ -605,63 +605,99 @@ class WordWatch(BaseModule):
             await self.utils.respond(ctx, ResponseLevel.success, module_settings.header or 'No header set')
     
     @commands.command(name='ww.add_ping')
-    async def ww_add_ping(self, ctx: commands.Context, group_name: str, ping: str):
+    async def ww_add_ping(self, ctx: commands.Context, group_name: str, *pings: str):
         
         for not_allowed in string.whitespace + '.':
             if not_allowed in group_name:
                 await self.utils.respond(ctx, ResponseLevel.general_error, 'Illegal character in group name')
 
-        try:
-            id = int(ping)
-        except ValueError:
-            mention_type, id = resolve_mention(ping)
-        else:
-            mention_type = await self.utils.guess_id(id, ctx.guild)
-        
-        if mention_type == None:
-            await self.utils.respond(ctx, ResponseLevel.general_error, "Couldn't resolve mention")
-        else:
+        errors = 0
+        duplicates = 0
+        additions = 0
+        for ping in pings:
             try:
-                group: WWPingGroup = await WWPingGroup.objects.get(guild__id=ctx.guild.id, name=group_name)
-            except ormar.NoMatch:
-                db_guild: DBGuild = await DBGuild.objects.get(id=ctx.guild.id)
-                group: WWPingGroup = await WWPingGroup.objects.create(guild=db_guild, name=group_name)
-            pings = await WWPing.objects.filter(group=group).all()
-            for db_ping in pings:
-                if db_ping.target_id == id:
-                    await self.utils.respond(ctx, ResponseLevel.general_error, 'Duplicate ping')
-                    break
+                id = int(ping)
+            except ValueError:
+                mention_type, id = resolve_mention(ping)
             else:
-                await WWPing.objects.create(
-                    ping_type=mention_type,
-                    target_id=id,
-                    group=group
-                )
-                await self.utils.respond(ctx, ResponseLevel.success)
+                mention_type = await self.utils.guess_id(id, ctx.guild)
+            
+            if mention_type == None:
+                errors += 1
+            else:
+                try:
+                    group: WWPingGroup = await WWPingGroup.objects.get(guild__id=ctx.guild.id, name=group_name)
+                except ormar.NoMatch:
+                    db_guild: DBGuild = await DBGuild.objects.get(id=ctx.guild.id)
+                    group: WWPingGroup = await WWPingGroup.objects.create(guild=db_guild, name=group_name)
+                pings = await WWPing.objects.filter(group=group).all()
+                for db_ping in pings:
+                    if db_ping.target_id == id:
+                        duplicates += 1
+                        break
+                else:
+                    await WWPing.objects.create(
+                        ping_type=mention_type,
+                        target_id=id,
+                        group=group
+                    )
+                    additions += 1
+        
+        if duplicates or errors:
+            message_parts = []
+            if additions:
+                message_parts.append(f'added {additions} new ping{pluralize("", "s", additions)}')
+            if errors:
+                message_parts.append(f'skipped {errors} malformed ping{pluralize("", "s", errors)}')
+            if duplicates:
+                message_parts.append(f'ignored {duplicates} duplicate ping{pluralize("", "s", duplicates)}')
+            await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
+        else:
+            await self.utils.respond(ctx, ResponseLevel.success)
     
     @commands.command(name='ww.remove_ping')
-    async def ww_remove_ping(self, ctx: commands.Context, group_name: str, ping: str):
-        
-        try:
-            id = int(ping)
-        except ValueError:
-            _, id = resolve_mention(ping)
+    async def ww_remove_ping(self, ctx: commands.Context, group_name: str, *pings: str):
 
-        if id == None:
-            await self.utils.respond(ctx, ResponseLevel.general_error, "Couldn't resolve mention")
-        else:
+        try:
+            group: WWPingGroup = await WWPingGroup.objects.get(guild__id=ctx.guild.id, name=group_name)
+        except ormar.NoMatch:
+            await self.utils.respond(ctx, ResponseLevel.general_error, f'Group `{group_name}` not found')
+            return
+
+        malformed = 0
+        to_delete = set()
+        for ping in pings:
             try:
-                group: WWPingGroup = await WWPingGroup.objects.get(guild__id=ctx.guild.id, name=group_name)
-            except ormar.NoMatch:
-                await self.utils.respond(ctx, ResponseLevel.general_error, 'Group not found')
-            pings = await WWPing.objects.filter(group=group).all()
-            for db_ping in pings:
-                if db_ping.target_id == id:
-                    await db_ping.delete()
-                    await self.utils.respond(ctx, ResponseLevel.success)
-                    break
+                id = int(ping)
+            except ValueError:
+                _, id = resolve_mention(ping)
+
+            if id == None:
+                malformed += 1
             else:
-                await self.utils.respond(ctx, ResponseLevel.general_error, 'Ping not found in group')
+                to_delete.add(id)
+
+        nonexistant = 0
+        deletions = 0
+        
+        db_pings = await WWPing.objects.filter(group=group).all()
+        for db_ping in db_pings:
+            if db_ping.target_id in to_delete:
+                await db_ping.delete()
+                deletions += 1
+        nonexistant = deletions - malformed
+        
+        if nonexistant or malformed:
+            message_parts = []
+            if deletions:
+                message_parts.append(f'removed {deletions} ping{pluralize("", "s", deletions)}')
+            if malformed:
+                message_parts.append(f'skipped {malformed} malformed ping{pluralize("", "s", malformed)}')
+            if nonexistant:
+                message_parts.append(f'ignored {nonexistant} nonexistant ping{pluralize("", "s", nonexistant)}')
+            await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
+        else:
+            await self.utils.respond(ctx, ResponseLevel.success)
     
     @commands.command(name='ww.delete_group')
     async def ww_delete_group(self, ctx: commands.Context, group_name: str):

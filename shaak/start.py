@@ -2,14 +2,17 @@ import asyncio
 
 import discord
 
-from shaak.custom_bot import CustomBot, CustomHelpCommand
-from shaak.database import (get_command_prefix,
-                            start_database)
-from shaak.manager import Manager
+from shaak.custom_bot import CustomBot
+from shaak.database   import get_command_prefix, start_database
+from shaak.manager    import Manager
+from shaak.conductor  import Conductor
+from shaak.utils      import Utils
+from shaak.settings   import app_settings
+
 from shaak.modules.word_watch import WordWatch
-from shaak.modules.ban_utils import BanUtils
-from shaak.utils import Utils
-from shaak.settings import app_settings
+from shaak.modules.ban_utils  import BanUtils
+
+from shaak.tasks.guild_cleanup import GuildCleanupTask
 
 def start_bot():
 
@@ -35,7 +38,6 @@ def start_bot():
     # create bot
     bot = CustomBot(
         command_prefix=get_command_prefix,
-        help_command=CustomHelpCommand(),
         intents=intents,
         member_cache_flags=member_cache_flags
     )
@@ -45,11 +47,17 @@ def start_bot():
     bot.add_cog(Utils(bot))
     manager = Manager(bot)
     bot.add_cog(manager)
+    conductor = Conductor(bot)
+    bot.add_cog(conductor)
     
     # load modules
     print('Loading modules')
     manager.load_module(WordWatch)
     # manager.load_module(BanUtils)
+
+    # load tasks
+    print('Loading tasks')
+    conductor.load_task(GuildCleanupTask)
 
     # start bot
     try:

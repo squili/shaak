@@ -5,10 +5,10 @@ import discord
 import ormar
 from discord.ext import commands
 
-from shaak.checks import has_privlidged_role
-from shaak.consts import ModuleInfo, ResponseLevel, setting_structure
-from shaak.database import Setting, DBGuild
-from shaak.settings import app_settings
+from shaak.checks     import has_privlidged_role
+from shaak.consts     import ModuleInfo, ResponseLevel, setting_structure
+from shaak.database   import Setting, DBGuild
+from shaak.settings   import app_settings
 from shaak.custom_bot import CustomBot
 
 class Manager(commands.Cog):
@@ -69,7 +69,7 @@ class Manager(commands.Cog):
         
         self.bot.manager_ready.set()
         
-        print('Shaak initialized!')
+        print('Manager initialized')
     
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
@@ -89,12 +89,6 @@ class Manager(commands.Cog):
 
         print(f'Removed from guild {guild.name} ({guild.id})')
 
-        # delete guild info
-        try:
-            await DBGuild.objects.filter(id=guild.id).delete()
-        except ormar.NoMatch:
-            pass
-    
     @commands.command('modules.enable')
     async def modules_enable(self, ctx: commands.Context, module_name: str):
         

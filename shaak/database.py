@@ -1,6 +1,7 @@
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
 import dataclasses
 import json
+from datetime import datetime
 from typing import Optional, List
 
 import databases
@@ -37,7 +38,8 @@ class DBGuild(ormar.Model):
     class Meta(MainMeta):
         tablename = 'guilds'
     
-    id: int = ormar.BigInteger (primary_key=True, autoincrement=False, unique=False)
+    id:             int = ormar.BigInteger (primary_key=True, autoincrement=False, unique=False)
+    delete_at: datetime = ormar.DateTime(nullable=True, default=None)
 
 class Setting(ormar.Model):
     class Meta(MainMeta):
