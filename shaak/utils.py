@@ -73,7 +73,7 @@ class Utils(commands.Cog):
         pages = chunks(items, 10)
         page_index = 0
         embed = discord.Embed(
-            description='\n'.join([item for item in pages[page_index]])
+            description='```' + '\n'.join([item for item in pages[page_index]]) + '```'
         )
         if len(pages) > 1:
             embed.set_footer(text=f'1/{len(pages)}')
@@ -108,14 +108,16 @@ class Utils(commands.Cog):
                 elif reaction_string == '⏩':
                     page_index = len(pages) - 1
                 embed = discord.Embed(
-                    description='\n'.join([item for item in pages[page_index]])
+                    description='```' + '\n'.join([item for item in pages[page_index]]) + '```'
                 )
                 embed.set_footer(text=f'{page_index+1}/{len(pages)}')
                 await new_message.edit(embed=embed)
                 await reaction.remove(user)
         
-        await new_message.clear_reaction('▶')
+        await new_message.clear_reaction('⏪')
         await new_message.clear_reaction('◀')
+        await new_message.clear_reaction('▶')
+        await new_message.clear_reaction('⏩')
     
     async def _aggressive_resolve(self, some_id: int, calm_method: Callable, aggressive_method: Coroutine, return_type: _T) -> Optional[_T]:
 

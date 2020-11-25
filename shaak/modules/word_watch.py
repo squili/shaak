@@ -175,6 +175,12 @@ class WordWatch(BaseModule):
                             watch, match[0], match[1]
                         ))
 
+        if delete_message:
+            try:
+                await message.delete()
+            except discord.NotFound:
+                pass # the message may be deleted before we get to it; this shouldn't cause us to not log the message
+
         if matches:
             module_settings: WWSetting = await WWSetting.objects.get(guild__id=message.guild.id)
             if module_settings.log_channel == None:
@@ -484,7 +490,7 @@ class WordWatch(BaseModule):
         for pattern in patterns:
 
             try:
-                watch = await WWWatch.objects.get(guild_id=ctx.guild.id, pattern=pattern)
+                watch = await WWWatch.objects.get(guild__id=ctx.guild.id, pattern=pattern)
             except ormar.NoMatch:
                 errors.append(pattern)
             else:
@@ -615,7 +621,11 @@ class WordWatch(BaseModule):
         if mention_type == None:
             await self.utils.respond(ctx, ResponseLevel.general_error, "Couldn't resolve mention")
         else:
-            group: WWPingGroup = await WWPingGroup.objects.get_or_create(guild_id=ctx.guild.id, name=group_name)
+            try:
+                group: WWPingGroup = await WWPingGroup.objects.get(guild__id=ctx.guild.id, name=group_name)
+            except ormar.NoMatch:
+                db_guild: DBGuild = await DBGuild.objects.get(id=ctx.guild.id)
+                group: WWPingGroup = await WWPingGroup.objects.create(guild=db_guild, name=group_name)
             pings = await WWPing.objects.filter(group=group).all()
             for db_ping in pings:
                 if db_ping.target_id == id:
@@ -641,7 +651,7 @@ class WordWatch(BaseModule):
             await self.utils.respond(ctx, ResponseLevel.general_error, "Couldn't resolve mention")
         else:
             try:
-                group: WWPingGroup = await WWPingGroup.objects.get(guild_id=ctx.guild.id, name=group_name)
+                group: WWPingGroup = await WWPingGroup.objects.get(guild__id=ctx.guild.id, name=group_name)
             except ormar.NoMatch:
                 await self.utils.respond(ctx, ResponseLevel.general_error, 'Group not found')
             pings = await WWPing.objects.filter(group=group).all()
@@ -657,7 +667,7 @@ class WordWatch(BaseModule):
     async def ww_delete_group(self, ctx: commands.Context, group_name: str):
 
         try:
-            group: WWPingGroup = await WWPingGroup.objects.get(guild_id=ctx.guild.id, name=group_name)
+            group: WWPingGroup = await WWPingGroup.objects.get(guild__id=ctx.guild.id, name=group_name)
         except ormar.NoMatch:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Group not found')
         else:
@@ -667,7 +677,7 @@ class WordWatch(BaseModule):
     @commands.command(name='ww.list_groups')
     async def ww_list_groups(self, ctx: commands.Context):
 
-        groups: List[WWPingGroup] = await WWPingGroup.objects.filter(guild_id=ctx.guild.id).all()
+        groups: List[WWPingGroup] = await WWPingGroup.objects.filter(guild__id=ctx.guild.id).all()
         entries = []
         for group in groups:
             ping_count = await WWPing.objects.filter(group=group).count()
