@@ -694,7 +694,7 @@ class WordWatch(BaseModule):
             if db_ping.target_id in to_delete:
                 await db_ping.delete()
                 deletions += 1
-        nonexistant = deletions - malformed
+        nonexistant = len(to_delete) - deletions - malformed
         
         if nonexistant or malformed:
             message_parts = []
