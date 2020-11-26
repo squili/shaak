@@ -1,4 +1,6 @@
+# pylint: disable=unsubscriptable-object # pylint/issues/3882
 import re
+from typing import Optional
 
 import discord
 import ormar
@@ -68,7 +70,7 @@ class Previews(BaseModule):
                 await self.send_message_preview(log_channel or message.channel, match)
     
     @commands.command('pv.view')
-    async def preview(self, ctx: commands.Context, link: str):
+    async def pv_view(self, ctx: commands.Context, link: str):
 
         err = await self.send_message_preview(ctx.channel, link)
         if err == 1:
@@ -80,7 +82,7 @@ class Previews(BaseModule):
     
     @commands.command('pv.add')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def add_channel(self, ctx: commands.Context, *channels: str):
+    async def pv_add(self, ctx: commands.Context, *channels: str):
 
         channel_ids = set()
         malformed = 0
@@ -122,7 +124,7 @@ class Previews(BaseModule):
     
     @commands.command('pv.remove')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def remove_channel(self, ctx: commands.Context, *channels: str):
+    async def pv_remove(self, ctx: commands.Context, *channels: str):
 
         channel_ids = set()
         malformed = 0
@@ -163,7 +165,7 @@ class Previews(BaseModule):
     
     @commands.command('pv.list')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def list_previews(self, ctx: commands.Context):
+    async def pv_list(self, ctx: commands.Context):
 
         filters = await PVFilter.objects.filter(guild__id=ctx.guild.id).all()
         if len(filters) == 0:
@@ -173,3 +175,25 @@ class Previews(BaseModule):
         await self.utils.list_items([
             id2mention(channel.channel_id, MentionType.channel) for channel in filters
         ])
+    
+    @commands.command(name='pv.log')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def pv_log(self, ctx: commands.Context, channel_reference: Optional[str] = None):
+
+        module_settings: PVSetting = await PVSetting.objects.get(guild__id=ctx.guild.id)
+        if channel_reference:
+            if channel_reference in ['clear', 'reset', 'disable']:
+                await module_settings.update(log_channel=None)
+            else:
+                try:
+                    channel_id = int(channel_reference)
+                except ValueError:
+                    channel_id = mention2id(channel_reference, MentionType.channel)
+                await module_settings.update(log_channel=channel_id)
+            await self.utils.respond(ctx, ResponseLevel.success)
+        else:
+            if module_settings.log_channel == None:
+                response = 'No log channel set'
+            else:
+                response = id2mention(module_settings.log_channel, MentionType.channel)
+            await self.utils.respond(ctx, ResponseLevel.success, response)
