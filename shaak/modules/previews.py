@@ -14,7 +14,7 @@ from shaak.database    import PVSetting, PVFilter, DBGuild
 from shaak.errors      import InvalidId
 from shaak.helpers     import MentionType, mention2id, id2mention, pluralize, commas
 
-message_link_regex = re.compile(r'https://(?:\w+\.)?discord.com/channels/\d+/\d+/\d+')
+message_link_regex = re.compile(r'https://(?:\w+\.)?discord(?:app)?.com/channels/\d+/\d+/\d+')
 
 class Previews(BaseModule):
     
