@@ -1,4 +1,5 @@
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
+import io
 import re
 from typing import Optional
 
@@ -49,6 +50,13 @@ class Previews(BaseModule):
             icon_url=message.author.avatar_url
         )
         await target_channel.send(embed=embed)
+        if len(message.attachments) > 0:
+            files = []
+            for attachment in message.attachments:
+                if attachment.size <= 8_388_119:
+                    files.append(await attachment.to_file())
+            if len(files) > 0:
+                await target_channel.send(files=files)
         return 0
 
     @commands.Cog.listener()
