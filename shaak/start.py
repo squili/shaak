@@ -10,6 +10,7 @@ from shaak.utils      import Utils
 from shaak.settings   import app_settings
 
 from shaak.modules.word_watch import WordWatch
+from shaak.modules.previews   import Previews
 from shaak.modules.ban_utils  import BanUtils
 
 from shaak.tasks.guild_cleanup import GuildCleanupTask
@@ -53,7 +54,7 @@ def start_bot():
     # load modules
     print('Loading modules')
     manager.load_module(WordWatch)
-    # manager.load_module(BanUtils)
+    manager.load_module(Previews)
 
     # load tasks
     print('Loading tasks')

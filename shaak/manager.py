@@ -47,8 +47,13 @@ class Manager(commands.Cog):
         print('Initializing guilds')
 
         for guild in self.bot.guilds:
+            # initialize db
             db_guild = await DBGuild.objects.get_or_create(id=guild.id)
             await Setting.objects.get_or_create(guild=db_guild)
+        
+            # create module settings
+            for module in self.modules.values():
+                await module.settings.objects.get_or_create(guild=DBGuild(id=guild.id))
         
         print('Initializing modules')
         
@@ -80,6 +85,10 @@ class Manager(commands.Cog):
         # initialize database
         db_guild = await DBGuild.objects.get_or_create(id=guild.id)
         await Setting.objects.get_or_create(guild=db_guild)
+        
+        # create module settings
+        for module in self.modules.values():
+            await module.settings.objects.get_or_create(guild=DBGuild(id=guild.id))
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):

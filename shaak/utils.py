@@ -218,35 +218,3 @@ class Utils(commands.Cog):
                 f'Message roundtrip: {message_roundtrip}ms',
             ])
         ))
-    
-    @commands.command('preview')
-    async def preview(self, ctx: commands.Context, link: str):
-
-        try:
-            parts = link.split('/')
-            channel_id = int(parts[-2])
-            message_id = int(parts[-1])
-        except (IndexError, ValueError):
-            await self.respond(ctx, ResponseLevel.general_error, 'Malformed message link')
-            return
-
-        channel = self.bot.get_channel(channel_id)
-        if channel == None:
-            await self.respond(ctx, ResponseLevel.general_error, 'Channel not found')
-            return
-        
-        try:
-            message = await channel.fetch_message(message_id)
-        except (discord.NotFound, discord.Forbidden):
-            await self.respond(ctx, ResponseLevel.general_error, 'Message not found')
-            return
-        
-        embed = discord.Embed(
-            description=message.content,
-            timestamp=message.created_at
-        )
-        embed.set_author(
-            name=message.author.name + '#' + message.author.discriminator,
-            icon_url=message.author.avatar_url
-        )
-        await ctx.send(embed=embed)

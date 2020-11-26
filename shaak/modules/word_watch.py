@@ -106,8 +106,6 @@ class WordWatch(BaseModule):
         
         if guild.id not in self.watch_cache:
             self.watch_cache[guild.id] = []
-        
-        await WWSetting.objects.get_or_create(guild=DBGuild(id=guild.id))
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
@@ -252,7 +250,7 @@ class WordWatch(BaseModule):
             try:
                 await log_channel.send(content=content, embed=message_embed)
             except HTTPException as e:
-                if e.code == 50035:
+                if e.code == 50035: # embed too long
                     # fallback
                     fallback_embed = discord.Embed(
                         color=discord.Color(0xd22513),
@@ -401,7 +399,7 @@ class WordWatch(BaseModule):
         if updates:
             message_parts.append(f'updated {updates} existing word{pluralize("", "s", updates)}')
         if duplicates:
-            message_parts.append(f'ignored {duplicates} duplicate word{pluralize("", "s", duplicates)}')
+            message_parts.append(f'skipped {duplicates} duplicate word{pluralize("", "s", duplicates)}')
         
         await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
 
@@ -658,9 +656,9 @@ class WordWatch(BaseModule):
             if additions:
                 message_parts.append(f'added {additions} new ping{pluralize("", "s", additions)}')
             if errors:
-                message_parts.append(f'skipped {errors} malformed ping{pluralize("", "s", errors)}')
+                message_parts.append(f'ignored {errors} malformed ping{pluralize("", "s", errors)}')
             if duplicates:
-                message_parts.append(f'ignored {duplicates} duplicate ping{pluralize("", "s", duplicates)}')
+                message_parts.append(f'skipped {duplicates} duplicate ping{pluralize("", "s", duplicates)}')
             await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
         else:
             await self.utils.respond(ctx, ResponseLevel.success)
@@ -703,9 +701,9 @@ class WordWatch(BaseModule):
             if deletions:
                 message_parts.append(f'removed {deletions} ping{pluralize("", "s", deletions)}')
             if malformed:
-                message_parts.append(f'skipped {malformed} malformed ping{pluralize("", "s", malformed)}')
+                message_parts.append(f'ignored {malformed} malformed ping{pluralize("", "s", malformed)}')
             if nonexistant:
-                message_parts.append(f'ignored {nonexistant} nonexistant ping{pluralize("", "s", nonexistant)}')
+                message_parts.append(f'skipped {nonexistant} nonexistant ping{pluralize("", "s", nonexistant)}')
             await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
         else:
             await self.utils.respond(ctx, ResponseLevel.success)

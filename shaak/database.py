@@ -66,7 +66,7 @@ class WWPingGroup(ormar.Model):
         tablename = 'ww_ping_groups'
     
     id:                  int = ormar.Integer    (primary_key=True)
-    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='ping_groups', ondelete='CASCADE')
+    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='ww_ping_groups', ondelete='CASCADE')
     name:                str = ormar.Text       (allow_blank=False, index=True)
 
 class WWPing(ormar.Model):
@@ -76,17 +76,17 @@ class WWPing(ormar.Model):
     id:                      int = ormar.Integer    (primary_key=True)
     ping_type:               str = ormar.String     (max_length=2)
     target_id:               int = ormar.BigInteger ()
-    group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='pings', ondelete='CASCADE')
+    group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='ww_pings', ondelete='CASCADE')
 
 class WWWatch(ormar.Model):
     class Meta(MainMeta):
         tablename = 'ww_watches'
     
     id:                           int = ormar.Integer    (primary_key=True)
-    guild:          Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='watches', ondelete='CASCADE')
+    guild:          Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='ww_watches', ondelete='CASCADE')
     pattern:                      str = ormar.Text       (index=True)
     match_type:                   int = ormar.Integer    ()
-    ping_group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='watches', ondelete='SET NULL')
+    ping_group: Optional[WWPingGroup] = ormar.ForeignKey (WWPingGroup, related_name='ww_watches', ondelete='SET NULL')
     auto_delete:                 bool = ormar.Boolean    ()
     ignore_case:                 bool = ormar.Boolean    ()
 
@@ -95,9 +95,26 @@ class WWIgnore(ormar.Model):
         tablename = 'ww_ignores'
     
     id:                  int = ormar.Integer    (primary_key=True)
-    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='ignores', ondelete='CASCADE')
+    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='ww_ignores', ondelete='CASCADE')
     target_id:           int = ormar.BigInteger (index=True, unqiue=True)
     mention_type:        str = ormar.String     (max_length=2)
+
+class PVSetting(ormar.Model):
+    class Meta(MainMeta):
+        tablename = 'pv_settings'
+    
+    id:                    int = ormar.Integer    (primary_key=True)
+    guild:   Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='pv_settings', ondelete='CASCADE')
+    enabled:              bool = ormar.Boolean    (default=False)
+    log_channel: Optional[int] = ormar.BigInteger (nullable=True)
+
+class PVFilter(ormar.Model):
+    class Meta(MainMeta):
+        tablename = 'pv_filter'
+    
+    id:                  int = ormar.Integer    (primary_key=True)
+    guild: Optional[DBGuild] = ormar.ForeignKey (DBGuild, related_name='pv_filters', ondelete='CASCADE')
+    channel_id:          int = ormar.BigInteger (unique=True)
 
 class BUEvent(ormar.Model):
     class Meta(MainMeta):
