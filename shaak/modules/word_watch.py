@@ -333,7 +333,7 @@ class WordWatch(BaseModule):
         if parsed_settings['ping']:
             try:
                 ping_group = await WWPingGroup.objects.get(
-                    guild_id=ctx.guild.id,
+                    guild=DBGuild(id=ctx.guild.id),
                     name=parsed_settings['ping']
                 )
             except ormar.NoMatch:
