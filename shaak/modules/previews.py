@@ -180,7 +180,7 @@ class Previews(BaseModule):
             await self.utils.respond(ctx, ResponseLevel.success, 'No channels found')
             return
         
-        await self.utils.list_items([
+        await self.utils.list_items(ctx, [
             id2mention(channel.channel_id, MentionType.channel) for channel in filters
         ])
     
