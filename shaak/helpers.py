@@ -1,16 +1,14 @@
 # pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
-import uuid
 import re
 import platform
 from typing import Optional, List, Any, Tuple, Union, TypeVar
 
-import unpaddedbase64
 import discord
 from discord.ext import commands
 
 from shaak.errors import InvalidId
-from shaak.database import Setting
+# from shaak.database import Setting
 
 _T = TypeVar('T')
 
@@ -80,12 +78,6 @@ def id2mention_validate(mention_type: MentionType):
 
 def id2mention(id: int, mention_type: MentionType) -> str:
     return f'<{mention_type}{id}>'
-
-def uuid2b64(inp: uuid.UUID) -> str:
-    return unpaddedbase64.encode_base64(inp.bytes, urlsafe=True)
-
-def b642uuid(inp: str) -> uuid.UUID:
-    return uuid.UUID(bytes=unpaddedbase64.decode_base64(inp))
 
 async def check_privildged(guild: discord.Guild, member: discord.Member):
 

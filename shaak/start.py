@@ -1,9 +1,10 @@
 import asyncio
+import signal
 
 import discord
+from tortoise import Tortoise
 
-from shaak.custom_bot import CustomBot
-from shaak.database   import get_command_prefix, start_database
+from shaak.custom_bot import CustomBot, get_command_prefix
 from shaak.manager    import Manager
 from shaak.conductor  import Conductor
 from shaak.utils      import Utils
@@ -15,13 +16,15 @@ from shaak.modules.ban_utils  import BanUtils
 
 from shaak.tasks.guild_cleanup import GuildCleanupTask
 
-def start_bot():
+async def start_bot():
 
     print('Initializing database')
 
     # initialize database before starting bot
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(loop.create_task(start_database()))
+    await Tortoise.init(
+        db_url=app_settings.database_url,
+        modules={'models': ['shaak.models']}
+    )
     
     # intents and cache flags
     intents = discord.Intents.none()
@@ -55,16 +58,24 @@ def start_bot():
     print('Loading modules')
     manager.load_module(WordWatch)
     manager.load_module(Previews)
+    manager.load_module(BanUtils)
 
     # load tasks
     print('Loading tasks')
     conductor.load_task(GuildCleanupTask)
 
     # start bot
+    loop = asyncio.get_running_loop()
+    loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(bot.close()))
+    loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(bot.close()))
     try:
         print('Starting bot')
-        bot.run(app_settings.token)
+        await bot.start(app_settings.token, reconnect=True)
     except discord.PrivilegedIntentsRequired:
         # we currently don't use any privlidged intents, but we could one day
-        print('An intent required! Please go to https://discord.com/developers/applications/ and enable it.')
+        print('An intent is required! Please go to https://discord.com/developers/applications/ and enable it.')
         exit(1)
+    finally:
+        if not bot.is_closed():
+            await bot.close()
+        await Tortoise.close_connections()

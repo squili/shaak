@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from shaak.errors import ModuleDisabled, NotAllowed, InvalidId
 from shaak.consts import ResponseLevel
+from shaak.models import GuildSettings, GlobalSettings
 
 class CustomBot(commands.Bot):
 
@@ -40,6 +41,21 @@ class CustomBot(commands.Bot):
             await self.utils.respond(ctx, ResponseLevel.internal_error, f'HTTP error code {error.code}')
         elif isinstance(error, (commands.CommandError, InvalidId)):
             await self.utils.respond(ctx, ResponseLevel.general_error, str(error) or type(error).__name__)
+        elif isinstance(error, NotImplementedError):
+            try:
+                await self.utils.respond(ctx, ResponseLevel.internal_error, 'Not implemented')
+            except NotImplementedError:
+                await ctx.send('Not implemented')
         else:
             await self.utils.respond(ctx, ResponseLevel.internal_error, f'Unhandled error of type {type(error).__name__}. Check the console!')
             raise error
+
+async def get_command_prefix(bot: CustomBot, message: discord.Message) -> str:
+    
+    await bot.manager_ready.wait()
+    if message.guild != None:
+        guild_settings: GuildSettings = await GuildSettings.get(guild_id=message.guild.id)
+        if guild_settings.prefix:
+            return guild_settings.prefix
+    global_settings = await GlobalSettings.get(id=0)
+    return global_settings.default_prefix

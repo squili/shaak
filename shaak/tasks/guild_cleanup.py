@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from shaak.consts    import TaskInfo
 from shaak.base_task import BaseTask
-from shaak.database  import DBGuild
+from shaak.models    import Guild
 
 class GuildCleanupTask(BaseTask):
 
@@ -17,7 +17,7 @@ class GuildCleanupTask(BaseTask):
         guild_ids = set()
         for guild in self.bot.guilds:
             guild_ids.add(guild.id)
-        for db_guild in await DBGuild.objects.all():
+        for db_guild in await Guild.all():
             if db_guild.id in guild_ids:
                 if db_guild.delete_at != None:
                     await db_guild.update(delete_at=None)

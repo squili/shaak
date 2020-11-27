@@ -4,15 +4,15 @@ import re
 from typing import Optional
 
 import discord
-import ormar
-from discord.ext import commands
+from discord.ext         import commands
+from tortoise.exceptions import DoesNotExist
 
 from shaak.base_module import BaseModule
 from shaak.checks      import has_privlidged_role_check
 from shaak.consts      import ModuleInfo, ResponseLevel
-from shaak.database    import PVSetting, PVFilter, DBGuild
 from shaak.errors      import InvalidId
 from shaak.helpers     import MentionType, mention2id, id2mention, pluralize, commas
+from shaak.models      import PreviewSettings, PreviewFilter
 
 message_link_regex = re.compile(r'https://(?:\w+\.)?discord(?:app)?.com/channels/\d+/\d+/\d+')
 
@@ -20,7 +20,7 @@ class Previews(BaseModule):
     
     meta = ModuleInfo(
         name='previews',
-        settings=PVSetting
+        settings=PreviewSettings
     )
 
     async def send_message_preview(self, target_channel: discord.TextChannel, link: str) -> int:
@@ -65,11 +65,11 @@ class Previews(BaseModule):
         matches = message_link_regex.findall(message.content)
         if matches:
             try:
-                await PVFilter.objects.get(channel_id=message.channel.id)
-            except ormar.NoMatch:
+                await PreviewFilter.get(channel_id=message.channel.id)
+            except DoesNotExist:
                 return
 
-            module_settings: PVSetting = await PVSetting.objects.get(guild__id=message.guild.id)
+            module_settings: PVSetting = await PreviewFilter.get(guild__id=message.guild.id)
             log_channel = None
             if module_settings.log_channel:
                 log_channel = self.bot.get_channel(module_settings.log_channel)
@@ -91,6 +91,8 @@ class Previews(BaseModule):
     @commands.command('pv.add')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def pv_add(self, ctx: commands.Context, *channels: str):
+
+        raise NotImplementedError()
 
         channel_ids = set()
         malformed = 0
@@ -134,6 +136,8 @@ class Previews(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def pv_remove(self, ctx: commands.Context, *channels: str):
 
+        raise NotImplementedError()
+
         channel_ids = set()
         malformed = 0
         for channel_reference in channels:
@@ -175,6 +179,8 @@ class Previews(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def pv_list(self, ctx: commands.Context):
 
+        raise NotImplementedError()
+
         filters = await PVFilter.objects.filter(guild__id=ctx.guild.id).all()
         if len(filters) == 0:
             await self.utils.respond(ctx, ResponseLevel.success, 'No channels found')
@@ -187,6 +193,8 @@ class Previews(BaseModule):
     @commands.command(name='pv.log')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def pv_log(self, ctx: commands.Context, channel_reference: Optional[str] = None):
+
+        raise NotImplementedError()
 
         module_settings: PVSetting = await PVSetting.objects.get(guild__id=ctx.guild.id)
         if channel_reference:

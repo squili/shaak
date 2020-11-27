@@ -12,7 +12,6 @@ from discord.ext    import commands
 from shaak.base_module import BaseModule
 from shaak.checks      import has_privlidged_role_check
 from shaak.consts      import MatchType, ModuleInfo, watch_setting_map
-from shaak.database    import WWSetting, WWPing, WWPingGroup, WWWatch, WWIgnore, DBGuild
 from shaak.errors      import InvalidId
 from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
                                get_int_ranges, getrange_s, id2mention,
@@ -21,6 +20,8 @@ from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
 from shaak.matcher     import pattern_preprocess, text_preprocess, word_matches
 from shaak.settings    import product_settings
 from shaak.utils       import ResponseLevel, Utils
+from shaak.models      import (WordWatchSettings, WordWatchPingGroup, WordWatchPing,
+                               WordWatchWatch, WordWatchIgnore)
 
 @dataclass
 class WatchCacheEntry:
@@ -46,7 +47,7 @@ class WordWatch(BaseModule):
     
     meta = ModuleInfo(
         name='word_watch',
-        settings=WWSetting
+        settings=WordWatchSettings
     )
 
     def __init__(self, *args, **kwargs):
@@ -56,7 +57,7 @@ class WordWatch(BaseModule):
         self.watch_cache: Dict[str, WatchCacheEntry] = {}
         self.bot.add_on_error_hooks(self.after_invoke_hook)
     
-    async def add_to_cache(self, watch: WWWatch) -> WatchCacheEntry:
+    async def add_to_cache(self, watch: None) -> WatchCacheEntry:
 
         if watch.guild.id not in self.watch_cache:
             self.watch_cache[watch.guild.id] = []
@@ -86,21 +87,19 @@ class WordWatch(BaseModule):
         return cache_entry
 
     async def initialize(self):
-        
+
         for guild in self.bot.guilds:
             self.watch_cache[guild.id] = []
-            await WWSetting.objects.get_or_create(guild=DBGuild(id=guild.id))
         
-        for watch in await WWWatch.objects.all():
-            if watch.guild.id not in self.watch_cache:
-                await watch.delete()
-            else:
-                await self.add_to_cache(watch)
+        for watch in await WordWatchWatch.all():
+            await self.add_to_cache(watch)
 
         await super().initialize()
     
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
+
+        return # TODO: implement
 
         await self.initialized.wait()
         
@@ -109,14 +108,13 @@ class WordWatch(BaseModule):
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
-        
         await self.initialized.wait()
         
         if guild.id in self.watch_cache:
             del self.watch_cache[guild.id]
         
     async def is_id_ignored(self, guild_id, target_id):
-        return await WWIgnore.objects.filter(guild__id=guild_id, target_id=target_id).limit(1).count() == 1
+        return await WordWatchIgnore.filter(guild_id=guild_id, target_id=target_id).exists()
 
     async def scan_message(self, message: discord.Message):
 
@@ -201,9 +199,9 @@ class WordWatch(BaseModule):
             pattern_list_code = commas([f"`{i}`" for i in deduped_patterns])
 
             raw_segments = sorted(list(set(
-                [index                     for range_ in
+                [index                       for range_ in
                 [range(match[1], match[2]+1) for match  in matches]
-                                           for index  in range_]
+                                             for index  in range_]
             ))) # p y t h o n i c
             ranges = get_int_ranges(raw_segments)
 
@@ -289,6 +287,8 @@ class WordWatch(BaseModule):
     @commands.command(name='ww.watch')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_watch(self, ctx: commands.Context, watch_settings: str, *patterns: str):
+
+        raise NotImplementedError()
 
         if len(patterns) == 0:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Please specify some patterns')
@@ -426,11 +426,15 @@ class WordWatch(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_list(self, ctx: commands.Context):
 
+        raise NotImplementedError()
+
         await self.list_words(ctx)
     
     @commands.command(name='ww.clear_watches')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_clear_watches(self, ctx: commands.Context):
+
+        raise NotImplementedError()
 
         if ctx.guild.id in self.watch_cache:
             to_delete = await WWWatch.objects.filter(guild__id=ctx.guild.id).all()
@@ -461,6 +465,8 @@ class WordWatch(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_remove(self, ctx: commands.Context, *ranges: str):
 
+        raise NotImplementedError()
+
         to_delete = set()
         for range_ in ranges:
             if '-' in range_:
@@ -488,6 +494,8 @@ class WordWatch(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_qremove(self, ctx: commands.Context, *patterns: str):
 
+        raise NotImplementedError()
+
         errors = []
         for pattern in patterns:
 
@@ -511,6 +519,8 @@ class WordWatch(BaseModule):
     @commands.command(name='ww.ignore')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_ignore(self, ctx: commands.Context, *references: str):
+
+        raise NotImplementedError()
 
         db_guild: DBGuild = await DBGuild.objects.get(id=ctx.guild.id)
 
@@ -543,6 +553,8 @@ class WordWatch(BaseModule):
     @commands.command(name='ww.ignored')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_ignored(self, ctx: commands.Context):
+
+        raise NotImplementedError()
         
         ignored = await WWIgnore.objects.filter(guild__id=ctx.guild.id).all()
         if len(ignored) == 0:
@@ -555,6 +567,8 @@ class WordWatch(BaseModule):
     @commands.command(name='ww.unignore')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_unignore(self, ctx: commands.Context, *references: str):
+
+        raise NotImplementedError()
 
         errors = []
         for index, reference in enumerate(references):
@@ -579,6 +593,8 @@ class WordWatch(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_log(self, ctx: commands.Context, channel_reference: Optional[str] = None):
 
+        raise NotImplementedError()
+
         module_settings: WWSetting = await WWSetting.objects.get(guild__id=ctx.guild.id)
         if channel_reference:
             if channel_reference in ['clear', 'reset', 'disable']:
@@ -601,6 +617,8 @@ class WordWatch(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_header(self, ctx: commands.Context, *, header_message: Optional[str] = None):
 
+        raise NotImplementedError()
+
         module_settings: WWSetting = await WWSetting.objects.get(guild__id=ctx.guild.id)
         if header_message:
             if header_message in ['clear', 'reset', 'disable']:
@@ -614,6 +632,8 @@ class WordWatch(BaseModule):
     @commands.command(name='ww.add_ping')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_add_ping(self, ctx: commands.Context, group_name: str, *pings: str):
+
+        raise NotImplementedError()
         
         for not_allowed in string.whitespace + '.':
             if not_allowed in group_name:
@@ -667,6 +687,8 @@ class WordWatch(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_remove_ping(self, ctx: commands.Context, group_name: str, *pings: str):
 
+        raise NotImplementedError()
+
         try:
             group: WWPingGroup = await WWPingGroup.objects.get(guild__id=ctx.guild.id, name=group_name)
         except ormar.NoMatch:
@@ -712,6 +734,8 @@ class WordWatch(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_delete_group(self, ctx: commands.Context, group_name: str):
 
+        raise NotImplementedError()
+
         try:
             group: WWPingGroup = await WWPingGroup.objects.get(guild__id=ctx.guild.id, name=group_name)
         except ormar.NoMatch:
@@ -723,6 +747,8 @@ class WordWatch(BaseModule):
     @commands.command(name='ww.list_groups')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_list_groups(self, ctx: commands.Context):
+
+        raise NotImplementedError()
 
         groups: List[WWPingGroup] = await WWPingGroup.objects.filter(guild__id=ctx.guild.id).all()
         entries = []
@@ -737,6 +763,8 @@ class WordWatch(BaseModule):
     @commands.command(name='ww.list_pings')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_list_pings(self, ctx: commands.Context, group_name: str):
+
+        raise NotImplementedError()
 
         pings = await WWPing.objects.filter(group__name=group_name).all()
         entries = []

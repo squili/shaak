@@ -3,7 +3,6 @@ import asyncio
 from discord.ext import commands
 
 from shaak.consts import ModuleInfo, ResponseLevel
-from shaak.database import Setting, DBGuild
 from shaak.custom_bot import CustomBot
 from shaak.errors import ModuleDisabled
 

@@ -2,12 +2,12 @@ import asyncio
 from typing import Callable, List, Dict
 
 import discord
-import ormar
 from discord.ext import commands
+from tortoise.exceptions import DoesNotExist
 
 from shaak.checks     import has_privlidged_role_check
 from shaak.consts     import ModuleInfo, ResponseLevel, setting_structure
-from shaak.database   import Setting, DBGuild
+from shaak.models     import Guild, GuildSettings
 from shaak.settings   import app_settings
 from shaak.custom_bot import CustomBot
 
@@ -46,14 +46,22 @@ class Manager(commands.Cog):
 
         print('Initializing guilds')
 
+        curr_ids = set()
         for guild in self.bot.guilds:
+            curr_ids.add(guild.id)
+
             # initialize db
-            db_guild = await DBGuild.objects.get_or_create(id=guild.id)
-            await Setting.objects.get_or_create(guild=db_guild)
+            await Guild.get_or_create(id=guild.id)
+            await GuildSettings.get_or_create(guild_id=guild.id)
         
             # create module settings
             for module in self.modules.values():
-                await module.settings.objects.get_or_create(guild=DBGuild(id=guild.id))
+                if module.settings != None:
+                    await module.settings.get_or_create(guild_id=guild.id)
+        
+        for db_guild in await Guild.all():
+            if db_guild.id not in curr_ids:
+                await db_guild.delete()
         
         print('Initializing modules')
         
@@ -86,7 +94,8 @@ class Manager(commands.Cog):
         
         # create module settings
         for module in self.modules.values():
-            await module.settings.objects.get_or_create(guild=DBGuild(id=guild.id))
+            if module.settings != None:
+                await module.settings.objects.get_or_create(guild=DBGuild(id=guild.id))
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
@@ -98,6 +107,8 @@ class Manager(commands.Cog):
     @commands.command('modules.enable')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def modules_enable(self, ctx: commands.Context, module_name: str):
+
+        raise NotImplementedError()
         
         if module_name in self.modules:
             module_settings = await self.modules[module_name].settings.objects.get(guild__id=ctx.guild.id)
@@ -109,6 +120,8 @@ class Manager(commands.Cog):
     @commands.command('modules.disable')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def modules_disable(self, ctx: commands.Context, module_name: str):
+
+        raise NotImplementedError()
         
         if module_name in self.modules:
             module_settings = await self.modules[module_name].settings.objects.get(guild__id=ctx.guild.id)
@@ -120,6 +133,8 @@ class Manager(commands.Cog):
     @commands.command('modules.list')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def modules_list(self, ctx: commands.Context):
+
+        raise NotImplementedError()
         
         entries = []
         for module in self.modules.values():
@@ -129,15 +144,14 @@ class Manager(commands.Cog):
     
     @commands.command('settings.set')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def settings_set(self, ctx: commands.Context, setting_name: str, *args):
+    async def settings_set(self, ctx: commands.Context, setting_name: str, *value_parts):
 
-        setting_value = ' '.join(args) or None
+        setting_value = ' '.join(value_parts) or None
 
         if setting_name in setting_structure:
-            guild_settings: Setting = await Setting.objects.get(guild__id=ctx.guild.id)
             if setting_value != None:
                 setting_value = setting_structure[setting_name][0](setting_value)
-            await guild_settings.update(**{setting_name: setting_value})
+            await GuildSettings.filter(guild_id=ctx.guild.id).update(**{setting_name: setting_value})
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Invalid setting name')
@@ -145,10 +159,10 @@ class Manager(commands.Cog):
     @commands.command('settings.list')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def settings_list(self, ctx: commands.Context):
-        
-        guild_settings: Setting = await Setting.objects.get(guild__id=ctx.guild.id)
+
+        guild_settings = await GuildSettings.get(guild_id=ctx.guild.id)
         formatted = []
-        for i in guild_settings.dict().items():
-            if i[0] in setting_structure:
-                formatted.append(f'{i[0]}: {"unset" if i[1] == None else setting_structure[i[0]][1](i[1])}')
+        for name, converter in setting_structure.items():
+            value = getattr(guild_settings, name, None)
+            formatted.append(f'{name}: {"unset" if value == None else converter[1](value)}')
         await self.utils.list_items(ctx, formatted)

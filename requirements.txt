@@ -1,4 +1,5 @@
 discord.py>=1.5
-ormar[postgresql]
-alembic
-unpaddedbase64
+tortoise-orm[asyncpg]
+python-rapidjson
+ciso8601
+aerich

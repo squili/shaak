@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import timedelta
 from enum import Enum
 
 import ormar
@@ -6,6 +7,8 @@ import discord
 from discord.ext import commands
 
 from shaak.helpers import str2bool, bool2str, mention2id_validate, id2mention_validate, MentionType, ensurebool, pass_value
+
+bu_invite_timeout = timedelta(days=3)
 
 class ResponseLevel(Enum):
     success         = 0
@@ -24,11 +27,6 @@ class TaskInfo:
     name:      str
     wait_time: float
 
-class PseudoId:
-    
-    def __init__(self, id: int):
-        self.id = id
-
 color_green = discord.Color(0x2ecc71)
 color_red   = discord.Color(0xd22513)
 
@@ -42,9 +40,9 @@ response_map = {
 
 # setting_name: (serialize, deserialize)
 setting_structure = {
-    'command_prefix':     (str, lambda x: f'`{x}`'),
-    'verbose_errors':     (str2bool, bool2str),
-    'authenticated_role': (mention2id_validate(MentionType.role), id2mention_validate(MentionType.role))
+    'prefix':    (str, lambda x: f'`{x}`'),
+    'verbosity': (str2bool, bool2str),
+    'auth_role': (mention2id_validate(MentionType.role), id2mention_validate(MentionType.role))
 }
 
 class MatchType(Enum):

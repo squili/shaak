@@ -9,10 +9,10 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
-from shaak.consts import ResponseLevel, response_map, color_green, MentionType
-from shaak.database import Setting, GlobalSetting
-from shaak.helpers import chunks, platform_info
-from shaak.settings import product_settings
+from shaak.consts      import ResponseLevel, response_map, color_green, MentionType
+from shaak.models      import GuildSettings, GlobalSettings
+from shaak.helpers     import chunks, platform_info
+from shaak.settings    import product_settings
 from shaak.extra_types import GeneralChannel
 
 _T = TypeVar('T')
@@ -23,7 +23,7 @@ class Utils(commands.Cog):
         self.bot = bot
     
     async def respond(self, ctx_or_message: Union[commands.Context, discord.Message], response_level: ResponseLevel, response: Optional[str] = None):
-        
+
         if response_level not in response_map:
             raise RuntimeError(f'Invalid response level {repr(response_level)}')
 
@@ -42,12 +42,12 @@ class Utils(commands.Cog):
                 if response_level == ResponseLevel.success:
                     be_loud = True
                 else:
-                    guild_settings: Setting = await Setting.objects.get(guild__id=message.guild.id)
-                    if guild_settings.verbose_errors == None:
-                        global_settings: GlobalSetting = await GlobalSetting.objects.get(id=0)
-                        be_loud = global_settings.verbose_errors
+                    guild_settings: GuildSettings = await GuildSettings.get(guild_id=message.guild.id)
+                    if guild_settings.verbosity == None:
+                        global_settings = await GlobalSettings.get(id=0)
+                        be_loud = global_settings.default_verbosity
                     else:
-                        be_loud = guild_settings.verbose_errors
+                        be_loud = guild_settings.verbosity
         
         if be_loud:
             

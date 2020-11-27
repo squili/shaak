@@ -1,9 +1,10 @@
 import argparse
+import asyncio
 
 def bootstrap():
 
     from shaak.start import start_bot
-    start_bot()
+    asyncio.run(start_bot())
 
 def init():
 
