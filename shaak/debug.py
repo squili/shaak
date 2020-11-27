@@ -31,7 +31,7 @@ class Debug(commands.Cog):
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Invalid command name')
         else:
             ctx.message.content = args
-            await command.reinvoke(await self.bot.get_context(ctx.message.content))
+            await command.reinvoke(await self.bot.get_context(ctx.message))
     
     @commands.command('debug.sql')
     async def debug_query(self, ctx: commands.Context, *, query: str):
