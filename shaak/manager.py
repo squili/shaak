@@ -89,13 +89,13 @@ class Manager(commands.Cog):
         print(f'Added to guild {guild.name} ({guild.id})')
 
         # initialize database
-        db_guild = await DBGuild.objects.get_or_create(id=guild.id)
-        await Setting.objects.get_or_create(guild=db_guild)
+        await Guild.get_or_create(id=guild.id)
+        await GuildSettings.get_or_create(guild_id=guild.id)
         
         # create module settings
         for module in self.modules.values():
             if module.settings != None:
-                await module.settings.objects.get_or_create(guild=DBGuild(id=guild.id))
+                await module.settings.get_or_create(guild=Guild(id=guild.id))
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
@@ -108,11 +108,8 @@ class Manager(commands.Cog):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def modules_enable(self, ctx: commands.Context, module_name: str):
 
-        raise NotImplementedError()
-        
         if module_name in self.modules:
-            module_settings = await self.modules[module_name].settings.objects.get(guild__id=ctx.guild.id)
-            await module_settings.update(enabled=True)
+            await self.modules[module_name].settings.filter(guild_id=ctx.guild.id).update(enabled=True)
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
             await self.utils.respond(ctx, ResponseLevel.general_error, f'Module `{module_name}` not found')
@@ -121,11 +118,8 @@ class Manager(commands.Cog):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def modules_disable(self, ctx: commands.Context, module_name: str):
 
-        raise NotImplementedError()
-        
         if module_name in self.modules:
-            module_settings = await self.modules[module_name].settings.objects.get(guild__id=ctx.guild.id)
-            await module_settings.update(enabled=False)
+            await self.modules[module_name].settings.filter(guild_id=ctx.guild.id).update(enabled=False)
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
             await self.utils.respond(ctx, ResponseLevel.general_error, f'Module `{module_name}` not found')
@@ -134,11 +128,9 @@ class Manager(commands.Cog):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def modules_list(self, ctx: commands.Context):
 
-        raise NotImplementedError()
-        
         entries = []
         for module in self.modules.values():
-            entries.append(f"{module.name}: {'enabled' if (await module.settings.objects.get(guild__id=ctx.guild.id)).enabled else 'disabled'}")
+            entries.append(f"{module.name}: {'enabled' if (await module.settings.get(guild_id=ctx.guild.id)).enabled else 'disabled'}")
 
         await self.utils.list_items(ctx, entries)
     

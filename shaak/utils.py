@@ -39,7 +39,7 @@ class Utils(commands.Cog):
         else:
             be_loud = False
             if response:
-                if response_level == ResponseLevel.success:
+                if response_level == ResponseLevel.success and response:
                     be_loud = True
                 else:
                     guild_settings: GuildSettings = await GuildSettings.get(guild_id=message.guild.id)

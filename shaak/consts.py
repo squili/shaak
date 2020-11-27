@@ -27,6 +27,10 @@ class TaskInfo:
     name:      str
     wait_time: float
 
+@dataclass
+class PseudoId:
+    id: int
+
 color_green = discord.Color(0x2ecc71)
 color_red   = discord.Color(0xd22513)
 

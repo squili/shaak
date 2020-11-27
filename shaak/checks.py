@@ -1,6 +1,5 @@
 from discord.ext import commands
 
-# from shaak.database import Setting
 from shaak.helpers import check_privildged
 from shaak.errors import NotAllowed
 

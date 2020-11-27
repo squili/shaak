@@ -12,7 +12,7 @@ from shaak.checks      import has_privlidged_role_check
 from shaak.consts      import ModuleInfo, ResponseLevel
 from shaak.errors      import InvalidId
 from shaak.helpers     import MentionType, mention2id, id2mention, pluralize, commas
-from shaak.models      import PreviewSettings, PreviewFilter
+from shaak.models      import PreviewSettings, PreviewFilter, Guild
 
 message_link_regex = re.compile(r'https://(?:\w+\.)?discord(?:app)?.com/channels/\d+/\d+/\d+')
 
@@ -64,12 +64,10 @@ class Previews(BaseModule):
         
         matches = message_link_regex.findall(message.content)
         if matches:
-            try:
-                await PreviewFilter.get(channel_id=message.channel.id)
-            except DoesNotExist:
+            if not await PreviewFilter.filter(channel_id=message.channel.id).exists():
                 return
 
-            module_settings: PVSetting = await PreviewFilter.get(guild__id=message.guild.id)
+            module_settings: PreviewSettings = await PreviewSettings.get(guild_id=message.guild.id)
             log_channel = None
             if module_settings.log_channel:
                 log_channel = self.bot.get_channel(module_settings.log_channel)
@@ -92,8 +90,6 @@ class Previews(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def pv_add(self, ctx: commands.Context, *channels: str):
 
-        raise NotImplementedError()
-
         channel_ids = set()
         malformed = 0
         for channel_reference in channels:
@@ -106,16 +102,14 @@ class Previews(BaseModule):
                     malformed += 1
                     continue
             channel_ids.add(channel_id)
-        
-        db_guild = await DBGuild.objects.get(id=ctx.guild.id)
 
         additions = 0
         duplicates = 0
         for channel_id in channel_ids:
             try:
-                await PVFilter.objects.get(guild=db_guild, channel_id=channel_id)
-            except ormar.NoMatch:
-                await PVFilter.objects.create(guild=db_guild, channel_id=channel_id)
+                await PreviewFilter.get(guild_id=ctx.guild.id, channel_id=channel_id)
+            except DoesNotExist:
+                await PreviewFilter.create(guild_id=ctx.guild.id, channel_id=channel_id)
                 additions += 1
             else:
                 duplicates += 1
@@ -136,8 +130,6 @@ class Previews(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def pv_remove(self, ctx: commands.Context, *channels: str):
 
-        raise NotImplementedError()
-
         channel_ids = set()
         malformed = 0
         for channel_reference in channels:
@@ -151,14 +143,14 @@ class Previews(BaseModule):
                     continue
             channel_ids.add(channel_id)
         
-        db_guild = await DBGuild.objects.get(id=ctx.guild.id)
+        db_guild = await Guild.get(id=ctx.guild.id)
 
         deletions = 0
         nonexistant = 0
         for channel_id in channel_ids:
             try:
-                await PVFilter.objects.filter(guild=db_guild, channel_id=channel_id).delete()
-            except ormar.NoMatch:
+                await PreviewFilter.filter(guild=db_guild, channel_id=channel_id).delete()
+            except DoesNotExist:
                 nonexistant += 1
             else:
                 deletions += 1
@@ -179,9 +171,7 @@ class Previews(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def pv_list(self, ctx: commands.Context):
 
-        raise NotImplementedError()
-
-        filters = await PVFilter.objects.filter(guild__id=ctx.guild.id).all()
+        filters = await PreviewFilter.filter(guild_id=ctx.guild.id).only('channel_id').all()
         if len(filters) == 0:
             await self.utils.respond(ctx, ResponseLevel.success, 'No channels found')
             return
@@ -194,20 +184,18 @@ class Previews(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def pv_log(self, ctx: commands.Context, channel_reference: Optional[str] = None):
 
-        raise NotImplementedError()
-
-        module_settings: PVSetting = await PVSetting.objects.get(guild__id=ctx.guild.id)
         if channel_reference:
             if channel_reference in ['clear', 'reset', 'disable']:
-                await module_settings.update(log_channel=None)
+                await PreviewSettings.filter(guild_id=ctx.guild.id).update(log_channel=None)
             else:
                 try:
                     channel_id = int(channel_reference)
                 except ValueError:
                     channel_id = mention2id(channel_reference, MentionType.channel)
-                await module_settings.update(log_channel=channel_id)
+                await PreviewSettings.filter(guild_id=ctx.guild.id).update(log_channel=channel_id)
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
+            module_settings: PreviewSettings = await PreviewSettings.filter(guild_id=ctx.guild.id).only('log_channel').get()
             if module_settings.log_channel == None:
                 response = 'No log channel set'
             else:

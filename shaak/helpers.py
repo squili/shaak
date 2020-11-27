@@ -2,13 +2,14 @@
 
 import re
 import platform
+from datetime import datetime
 from typing import Optional, List, Any, Tuple, Union, TypeVar
 
 import discord
 from discord.ext import commands
 
 from shaak.errors import InvalidId
-# from shaak.database import Setting
+from shaak.models import GuildSettings
 
 _T = TypeVar('T')
 
@@ -81,13 +82,13 @@ def id2mention(id: int, mention_type: MentionType) -> str:
 
 async def check_privildged(guild: discord.Guild, member: discord.Member):
 
-    guild_settings: Setting = await Setting.objects.get(guild__id=guild.id)
+    guild_settings: GuildSettings = await GuildSettings.get(guild_id=guild.id)
 
-    if guild_settings.authenticated_role == None:
+    if guild_settings.auth_role == None:
         return None
 
     for role in member.roles:
-        if role.id == guild_settings.authenticated_role:
+        if role.id == guild_settings.auth_role:
             return True
     else:
         return False
@@ -168,3 +169,6 @@ def resolve_mention(message: str) -> Optional[Tuple[MentionType, int]]:
         if message.startswith('<' + potential_type):
             return potential_type, mention2id(message, potential_type)
     return None, None
+
+def datetime_repr(dt: datetime) -> str:
+    return dt.strftime('%d/%m/%y')

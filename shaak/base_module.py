@@ -38,7 +38,7 @@ class BaseModule(commands.Cog):
         await self.bot.manager_ready.wait()
         await self.initialized.wait()
 
-        module_settings = await self.meta.settings.objects.get(guild__id=ctx.guild.id)
+        module_settings = await self.meta.settings.get(guild_id=ctx.guild.id)
         if module_settings.enabled:
             return True
         else:
