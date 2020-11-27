@@ -97,7 +97,7 @@ class Manager(commands.Cog):
         # create module settings
         for module in self.modules.values():
             if module.settings != None:
-                await module.settings.get_or_create(guild=Guild(id=guild.id))
+                await module.settings.get_or_create(guild_id=guild.id)
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):

@@ -130,17 +130,27 @@ class WordWatch(BaseModule):
         if message.channel.category_id and await self.is_id_ignored(message.guild.id, message.channel.category_id):
             return
         
+        # lots of debug code here. hopefully i can get an error to throw with this better info
+        dbg = 'a'
         check_member = message.webhook_id == None
         if isinstance(message.author, discord.User):
+            dbg += 'b'
             try:
                 message.author = await message.guild.fetch_member(message.author.id)
+                dbg += 'd'
             except discord.HTTPException:
+                dbg += 'c'
                 check_member = False
 
         if check_member:
-            for role in message.author.roles:
-                if await self.is_id_ignored(message.guild.id, role.id):
-                    return
+            dbg += f' {message.author.name} {message.author.id}'
+            try:
+                for role in message.author.roles:
+                    if await self.is_id_ignored(message.guild.id, role.id):
+                        return
+            except Exception as e:
+                print(dbg)
+                raise e
         
         delete_message = False
         matches = set()
@@ -379,7 +389,7 @@ class WordWatch(BaseModule):
                     existing.ignore_case = not parsed_settings['cased']
                     something_changed = True
                 if something_changed:
-                    await existing.update()
+                    await existing.save()
                     for index, word in enumerate(self.watch_cache[ctx.guild.id]):
                         if word.id == existing.id:
                             del self.watch_cache[ctx.guild.id][index]

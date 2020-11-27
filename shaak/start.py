@@ -35,10 +35,11 @@ async def start_bot():
     intents.reactions = True
     intents.bans = True
     intents.voice_states = True # hopefully this populates our cache enough
+    intents.members = True
     member_cache_flags = discord.MemberCacheFlags(
-        online=False,
+        online=True,
         voice=True,
-        joined=False
+        joined=True
     )
 
     # create bot

@@ -30,7 +30,7 @@ class Debug(commands.Cog):
         if command == None:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Invalid command name')
         else:
-            ctx.message.content = args
+            ctx.message.content = args or ''
             await command.reinvoke(await self.bot.get_context(ctx.message))
     
     @commands.command('debug.sql')
