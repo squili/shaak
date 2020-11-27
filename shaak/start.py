@@ -5,10 +5,12 @@ import discord
 from tortoise import Tortoise
 
 from shaak.custom_bot import CustomBot, get_command_prefix
+from shaak.settings   import app_settings
+
 from shaak.manager    import Manager
 from shaak.conductor  import Conductor
 from shaak.utils      import Utils
-from shaak.settings   import app_settings
+from shaak.debug      import Debug
 
 from shaak.modules.word_watch import WordWatch
 from shaak.modules.previews   import Previews
@@ -49,6 +51,7 @@ async def start_bot():
     # add cogs
     print('Loading cogs')
     bot.add_cog(Utils(bot))
+    bot.add_cog(Debug(bot))
     manager = Manager(bot)
     bot.add_cog(manager)
     conductor = Conductor(bot)

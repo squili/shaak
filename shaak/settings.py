@@ -29,6 +29,7 @@ class AppSettings:
     token:        str
     database_url: str
     status:       str
+    owner_id:     int
 
 @dataclasses.dataclass
 class ProductSettings:
@@ -40,19 +41,8 @@ class ProductSettings:
     author_page:   str
     author_donate: str
 
-raw_settings = load_from_file('settings.json', ['token', 'database_url', 'status'])
-app_settings = AppSettings(
-    token        = raw_settings['token'],
-    database_url = raw_settings['database_url'],
-    status       = raw_settings['status']
-)
+raw_settings = load_from_file('settings.json', ['token', 'database_url', 'status', 'owner_id'])
+app_settings = AppSettings(**raw_settings)
 
 raw_product = load_from_file('product.json', ['bot_name', 'bot_version', 'author_name', 'author_page', 'bot_repo', 'author_donate'])
-product_settings = ProductSettings(
-    bot_name      = raw_product['bot_name'],
-    bot_version   = raw_product['bot_version'],
-    bot_repo      = raw_product['bot_repo'],
-    author_name   = raw_product['author_name'],
-    author_page   = raw_product['author_page'],
-    author_donate = raw_product['author_donate']
-)
+product_settings = ProductSettings(**raw_product)

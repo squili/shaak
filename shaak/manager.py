@@ -1,5 +1,7 @@
+# pylint: disable=unsubscriptable-object   # pylint/issues/3882
+
 import asyncio
-from typing import Callable, List, Dict
+from typing import Callable, List, Dict, Optional
 
 import discord
 from discord.ext import commands
@@ -136,9 +138,7 @@ class Manager(commands.Cog):
     
     @commands.command('settings.set')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def settings_set(self, ctx: commands.Context, setting_name: str, *value_parts):
-
-        setting_value = ' '.join(value_parts) or None
+    async def settings_set(self, ctx: commands.Context, setting_name: str, *, setting_value: Optional[str]):
 
         if setting_name in setting_structure:
             if setting_value != None:

@@ -50,7 +50,8 @@ def initialize_bot():
         setting_names = [
             [ 'token',        str ],
             [ 'database_url', str ],
-            [ 'status',       str ]
+            [ 'status',       str ],
+            [ 'owner_id',     int ]
         ]
 
         try:
