@@ -43,7 +43,9 @@ async def start_bot():
     # initialize database before starting bot
     await Tortoise.init(
         db_url=app_settings.database_url,
-        modules={'models': ['shaak.models']}
+        modules={
+            'models': ['shaak.models']
+        }
     )
     
     # intents and cache flags

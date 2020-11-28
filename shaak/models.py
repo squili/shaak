@@ -82,7 +82,7 @@ class BanUtilBanEvent(Model):
     message_id      = fields.BigIntField     ()
     message_channel = fields.BigIntField     ()
     target_id       = fields.BigIntField     ()
-    banner_id       = fields.BigIntField     (null=True)
+    banner_id       = fields.BigIntField     ()
     ban_reason      = fields.TextField       ()
     timestamp       = fields.DatetimeField   (auto_now_add=True)
     banned          = fields.BooleanField    (default=True)

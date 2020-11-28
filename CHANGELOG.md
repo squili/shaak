@@ -1,3 +1,9 @@
+### 1.0.4
+- Created migrations
+- Allowed more than one ban event to exist at any given time
+- Update ban event based on outside factors
+- Add close button
+
 ### 1.0.3
 - Added GNU GPL 3 license
 - Redid word watch's list output

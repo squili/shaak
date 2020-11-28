@@ -101,12 +101,19 @@ class BanUtils(BaseModule):
 
         if icon_url == None:
             icon_url = guild.icon_url
-        
-        description_entries = [
-            ( 'Reason',                                                              ban_event.ban_reason ),
-            ( '📣', f'Reported on {datetime_repr(ban_event.reported)}' if ban_event.reported else 'Report' ),
-            ( '🔄' if ban_event.banned else '🔨',                   'Unban' if ban_event.banned else 'Ban' )
-        ]
+
+        if ban_event.id == None:
+            description_entries = [
+                ( 'Reason', ban_event.ban_reason ),
+                ( '❌',                  'Closed' )
+            ]
+        else:
+            description_entries = [
+                ( 'Reason',                                                               ban_event.ban_reason ),
+                ( '📣', f'Reported on {datetime_repr(ban_event.reported)}' if ban_event.reported else 'Report' ),
+                ( '🔄' if ban_event.banned else '🔨',                   'Unban' if ban_event.banned else 'Ban' ),
+                ( '❌',                                                                                 'Close')
+            ]
 
         embed = discord.Embed(
             color=color_red,
@@ -147,12 +154,19 @@ class BanUtils(BaseModule):
                 title += f' by {banner_user.name}#{banner_user.discriminator}'
                 if icon_url == None:
                     icon_url = banner_user.avatar_url
-        
-        description_entries = [
-            ( 'Reason',                                                          crossban_event.event.ban_reason ),
-            ( '📣', f'Forwarded on {datetime_repr(crossban_event.reported)}' if crossban_event.reported else 'Forward' ),
-            ( '🔄' if crossban_event.banned else '🔨',                'Unban' if crossban_event.banned else 'Ban' )
-        ]
+
+        if crossban_event.id == None:
+            description_entries = [
+                ( 'Reason', crossban_event.event.ban_reason ),
+                ( '❌',                             'Closed' )
+            ]
+        else:
+            description_entries = [
+                ( 'Reason',                                                                crossban_event.event.ban_reason ),
+                ( '📣', f'Forwarded on {datetime_repr(crossban_event.reported)}' if crossban_event.reported else 'Forward' ),
+                ( '🔄' if crossban_event.banned else '🔨',                     'Unban' if crossban_event.banned else 'Ban' ),
+                ( '❌',                                                                                             'Close')
+            ]
 
         embed = discord.Embed(
             color=color_red,
@@ -161,24 +175,36 @@ class BanUtils(BaseModule):
         embed.set_author(name=title, icon_url=icon_url)
         await message.edit(embed=embed)
     
+    async def update_event(self, event, update_func, new_state, add_react, remove_react):
+        event.banned = new_state
+        await event.save()
+        await update_func(event)
+        message = await self.bot.get_channel(event.message_channel).fetch_message(event.message_id)
+        await message.clear_reaction(remove_react)
+        await message.clear_reaction('📨')
+        await message.add_reaction(add_react)
+    
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user: Union[discord.Member, discord.User]):
 
-        if await BanUtilBanEvent.filter(guild_id=guild.id, target_id=user.id).exists():
-            return
-
-        if await BanUtilCrossbanEvent.filter(guild_id=guild.id, event__target_id=user.id).exists():
-            return
-
+        for event in await BanUtilBanEvent.filter(guild_id=guild.id, target_id=user.id).all():
+            await self.update_event(event, self.update_ban_message, True, '🔄', '🔨')
+        for event in await BanUtilCrossbanEvent.filter(guild_id=guild.id, event__target_id=user.id).all():
+            await self.update_event(event, self.update_crossban_message, True, '🔄', '🔨')
+        
         ban_user_id = None
         async for log_entry in guild.audit_logs(limit=100, action=discord.AuditLogAction.ban):
             if log_entry.target == user:
                 ban_user_id = log_entry.user.id
                 ban_reason = log_entry.reason
                 break
-        else: # fallback; shouldn't happen, but it's better to have less functionality than none
-            ban_entry = await guild.fetch_ban(user)
-            ban_reason = ban_entry.reason
+        else:
+            print(f"Didn't find audit log entry in {guild.name} ({guild.id}) for ban of {user.name} ({user.id})")
+            return
+        
+        for line in ban_reason.splitlines(keepends=False):
+            if line.startswith('#BUIgnore'):
+                return
         
         module_settings: BanUtilSettings = await BanUtilSettings.get(guild_id=guild.id)
 
@@ -208,6 +234,15 @@ class BanUtils(BaseModule):
 
         await new_message.add_reaction('📣')
         await new_message.add_reaction('🔄')
+        await new_message.add_reaction('❌')
+    
+    @commands.Cog.listener()
+    async def on_member_unban(self, guild: discord.Guild, user: Union[discord.Member, discord.User]):
+
+        for event in await BanUtilBanEvent.filter(guild_id=guild.id, target_id=user.id).all():
+            await self.update_event(event, self.update_ban_message, False, '🔨', '🔄')
+        for event in await BanUtilCrossbanEvent.filter(guild_id=guild.id, event__target_id=user.id).all():
+            await self.update_event(event, self.update_crossban_message, False, '🔨', '🔄')
 
     # we have to use the raw reaction event because rapptz hates me
     @commands.Cog.listener()
@@ -215,7 +250,7 @@ class BanUtils(BaseModule):
 
         if payload.user_id == self.bot.user.id \
             or payload.emoji.is_custom_emoji() \
-            or payload.emoji.name not in ['📣', '🔄', '🔨']:
+            or payload.emoji.name not in ['📣', '🔄', '🔨', '❌']:
             return
 
         guild = self.bot.get_guild(payload.guild_id)
@@ -245,10 +280,12 @@ class BanUtils(BaseModule):
         if privilidged:
             ban_perms = True
             crosspost_perms = True
+            delete_perms = True
         else:
             permissions = user.permissions_in(channel)
             ban_perms = permissions.ban_members
             crosspost_perms = permissions.manage_guild
+            delete_perms = permissions.manage_guild
 
         if payload.emoji.name == '📣' and crosspost_perms:
             await message.add_reaction('📨')
@@ -288,6 +325,10 @@ class BanUtils(BaseModule):
                 event.reported = datetime.now()
                 await event.save(update_fields=['reported'])
 
+            if is_ban_event:
+                await self.update_ban_message(event)
+            else:
+                await self.update_crossban_message(event)
             await message.remove_reaction('📨', self.bot.user)
         elif payload.emoji.name == '🔄' and event.banned and ban_perms:
 
@@ -300,10 +341,8 @@ class BanUtils(BaseModule):
             except discord.HTTPException as e:
                 if e.code == 10026:
                     pass
-            event.banned = False
-            await event.save(update_fields=['banned'])
-            await message.remove_reaction(payload.emoji, self.bot.user)
-            await message.add_reaction('🔨')
+            else:
+                await message.add_reaction('📨')
         
         elif payload.emoji.name == '🔨' and not event.banned and ban_perms:
 
@@ -311,25 +350,24 @@ class BanUtils(BaseModule):
                 ban_event = event
             else:
                 ban_event = event.event
-            try:
-                await guild.ban(PseudoId(ban_event.target_id), reason=f'BanUtils action by {user.id}')
-            except discord.HTTPException as e:
-                if e.code == 10026:
-                    pass
-            event.banned = True
-            await event.save(update_fields=['banned'])
-            await message.remove_reaction(payload.emoji, self.bot.user)
-            await message.add_reaction('🔄')
+            await guild.ban(PseudoId(ban_event.target_id), reason=f'BanUtils action by {user.id}\n#BUIgnore')
+            await message.add_reaction('📨')
+        
+        elif payload.emoji.name == '❌' and delete_perms:
+
+            await event.delete()
+            await message.clear_reactions()
+            event.id = None
+            if is_ban_event:
+                await self.update_ban_message(event)
+            else:
+                await self.update_crossban_message(event)
         
         else:
             return
         
         await message.remove_reaction(payload.emoji, user)
-        if is_ban_event:
-            await self.update_ban_message(event)
-        else:
-            await self.update_crossban_message(event)
-    
+        
     @commands.command('bu.invite')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def bu_invite(self, ctx: commands.Context, target_guild_id: int):

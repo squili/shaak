@@ -40,7 +40,9 @@ async def init_db():
     print('Initializing database')
     await Tortoise.init(
         db_url=app_settings.database_url,
-        modules={'models': ['shaak.models']}
+        modules={
+            'models': ['shaak.models', 'aerich.models']
+        }
     )
     conn = Tortoise.get_connection('default')
     resp = await conn.execute_query("select * from information_schema.tables where table_schema = 'public'")
