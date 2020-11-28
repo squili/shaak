@@ -193,14 +193,13 @@ class BanUtils(BaseModule):
             await self.update_event(event, self.update_crossban_message, True, '🔄', '🔨')
         
         ban_user_id = None
-        async for log_entry in guild.audit_logs(limit=100, action=discord.AuditLogAction.ban):
-            if log_entry.target == user:
-                ban_user_id = log_entry.user.id
-                ban_reason = log_entry.reason
-                break
-        else:
-            print(f"Didn't find audit log entry in {guild.name} ({guild.id}) for ban of {user.name} ({user.id})")
-            return
+        while ban_user_id == None:
+            async for log_entry in guild.audit_logs(limit=100, action=discord.AuditLogAction.ban):
+                if log_entry.target == user:
+                    ban_user_id = log_entry.user.id
+                    ban_reason = log_entry.reason
+                    break
+            await asyncio.sleep(0.1)
         
         for line in ban_reason.splitlines(keepends=False):
             if line.startswith('#BUIgnore'):
