@@ -1,3 +1,21 @@
+'''
+Shaak Discord moderation bot
+Copyright (C) 2020 Squili
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+'''
+
 # pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
 import asyncio
@@ -65,34 +83,48 @@ class Utils(commands.Cog):
         
             await message.add_reaction(response_emoji)
     
-    async def list_items(self, ctx: commands.Context, items: List[str], escape: bool = False):
+    async def reaction_wait(self, ctx: commands.Context, target_message: discord.Message,
+                            listen_for: List[str], timeout: float = 30.0) -> Optional[str]:
+        
+        def check(reaction: discord.Reaction, user: discord.User) -> bool:
+            return reaction.message == target_message and user == ctx.author and str(reaction) in listen_for
+        try:
+            reaction, _ = await self.bot.wait_for('reaction_add', timeout=timeout, check=check)
+        except asyncio.TimeoutError:
+            return None
+        else:
+            return str(reaction)
+    
+    async def list_items(self, ctx: commands.Context, items: List[str], escape: bool = False,
+                         title: Optional[str] = None, custom_embed: Optional[Coroutine] = None):
 
         if len(items) == 0:
             return
         
         pages = chunks(items, 10)
         page_index = 0
-        text = '\n'.join([item for item in pages[page_index]])
-        if escape:
-            text = f'```{text}```'
-        embed = discord.Embed(
-            description=text
-        )
-        if len(pages) > 1:
-            embed.set_footer(text=f'1/{len(pages)}')
+        if custom_embed == None:
+            text = '\n'.join([item for item in pages[page_index]])
+            if escape:
+                text = f'```{text}```'
+            embed = discord.Embed(
+                description=text,
+                title=title
+            )
+            if len(pages) > 1:
+                embed.set_footer(text=f'1/{len(pages)}')
+        else:
+            embed = await custom_embed(ctx, pages[page_index], page_index, len(pages))
         new_message = await ctx.send(embed=embed)
         
         if len(pages) == 1:
             return
         
-        await new_message.add_reaction('⏪')
-        await new_message.add_reaction('◀')
-        await new_message.add_reaction('▶')
-        await new_message.add_reaction('⏩')
+        for emoji in ['⏪', '◀', '▶', '⏩']:
+            await new_message.add_reaction(emoji)
         
-        def check(reaction: discord.Reaction, user: discord.User):
-            return reaction.message.id == new_message.id and user == ctx.author \
-                and str(reaction.emoji) in ['⏪', '◀', '▶', '⏩']
+        def check(reaction: discord.Reaction, user: discord.User) -> bool:
+            return reaction.message == new_message and user == ctx.author and str(reaction) in ['⏪', '◀', '▶', '⏩']
         
         while True:
             
@@ -110,20 +142,22 @@ class Utils(commands.Cog):
                     page_index = 0
                 elif reaction_string == '⏩':
                     page_index = len(pages) - 1
-                text = '\n'.join([item for item in pages[page_index]])
-                if escape:
-                    text = f'```{text}```'
-                embed = discord.Embed(
-                    description=text
-                )
-                embed.set_footer(text=f'{page_index+1}/{len(pages)}')
+                if custom_embed == None:
+                    text = '\n'.join([item for item in pages[page_index]])
+                    if escape:
+                        text = f'```{text}```'
+                    embed = discord.Embed(
+                        description=text,
+                        title=title
+                    )
+                    embed.set_footer(text=f'{page_index+1}/{len(pages)}')
+                else:
+                    embed = await custom_embed(ctx, pages[page_index], page_index, len(pages))
                 await new_message.edit(embed=embed)
                 await reaction.remove(user)
         
-        await new_message.clear_reaction('⏪')
-        await new_message.clear_reaction('◀')
-        await new_message.clear_reaction('▶')
-        await new_message.clear_reaction('⏩')
+        for emoji in ['⏪', '◀', '▶', '⏩']:
+            await new_message.clear_reaction(emoji)
     
     async def _aggressive_resolve(self, some_id: int, calm_method: Callable, aggressive_method: Coroutine, return_type: _T) -> Optional[_T]:
 

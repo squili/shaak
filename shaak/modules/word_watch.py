@@ -1,8 +1,26 @@
+'''
+Shaak Discord moderation bot
+Copyright (C) 2020 Squili
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+'''
+
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
 import re
 import string
 from dataclasses import dataclass
-from typing      import Any, Callable, Dict, List, Optional
+from typing      import Any, Callable, Dict, List, Optional, Union, Tuple
 
 import discord
 from discord.errors import HTTPException
@@ -16,7 +34,7 @@ from shaak.errors      import InvalidId
 from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
                                get_int_ranges, getrange_s, id2mention,
                                link_to_message, mention2id, pluralize,
-                               resolve_mention)
+                               resolve_mention, possesivize, chunks)
 from shaak.matcher     import pattern_preprocess, text_preprocess, word_matches
 from shaak.settings    import product_settings
 from shaak.utils       import ResponseLevel, Utils
@@ -413,26 +431,44 @@ class WordWatch(BaseModule):
         if module_settings.log_channel == None:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'WARNING: You have no log channel set, so nothing will be logged!')
     
-    async def list_words(self, ctx: commands.Context, filter_lambda: Optional[Callable] = None):
+    async def compute_list_embed(self, ctx: commands.Context, items: List[Tuple[int, WatchCacheEntry]],
+                                 page_number: int, page_max: int):
 
-        if filter_lambda:
-            filtered = [watch for watch in self.watch_cache[ctx.guild.id] if filter_lambda(watch)]
-        else:
-            filtered = self.watch_cache[ctx.guild.id]
+        embed = discord.Embed(
+            title=possesivize(ctx.guild.name)
+        )
+        embed.set_footer(text=f'{page_number+1}/{page_max}')
+        for index, item in items:
+            field_name = f'`{index+1}`: {"word" if item.match_type == MatchType.word else "regex"}'
+            if item.group_id == None:
+                group = None
+            else:
+                group = await WordWatchPingGroup.get(id=item.group_id)
+            name_extras = [i for i in (
+                'Autodelete' if item.auto_delete else None,
+                None if item.ignore_case else 'Cased',
+                None if group == None else f'Pings `{group.name}`'
+            ) if i != None]
+            if name_extras:
+                field_name += ' - ' + ', '.join(name_extras)
+            embed.add_field(
+                name=field_name,
+                value='`' + item.pattern + '`',
+                inline=False
+            )
+        return embed
 
-        if len(filtered) == 0:
-            await self.utils.respond(ctx, ResponseLevel.success, 'No watches found')
-            return
-        
-        await self.utils.list_items(ctx, [
-            f'{index+1}: {watch.pattern}' for index, watch in enumerate(filtered)
-        ], escape=True)
-    
     @commands.command(name='ww.list')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_list(self, ctx: commands.Context):
 
-        await self.list_words(ctx)
+        items = list(enumerate(self.watch_cache[ctx.guild.id]))
+
+        if len(items) == 0:
+            await self.utils.respond(ctx, ResponseLevel.success, 'No watches found')
+            return
+        
+        await self.utils.list_items(ctx, items, custom_embed=self.compute_list_embed)
     
     @commands.command(name='ww.clear_watches')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
