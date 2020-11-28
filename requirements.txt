@@ -2,4 +2,4 @@ discord.py>=1.5
 tortoise-orm[asyncpg]
 python-rapidjson
 ciso8601
-aerich
+aerich==0.3.3
