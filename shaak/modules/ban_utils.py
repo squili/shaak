@@ -32,9 +32,9 @@ from shaak.base_module import BaseModule
 from shaak.checks import has_privlidged_role_check
 from shaak.consts import (ModuleInfo, ResponseLevel, bu_invite_timeout,
                           color_red, PseudoId)
-from shaak.helpers import MentionType, check_privildged, id2mention, datetime_repr
-from shaak.models import (BanUtilBanEvent, BanUtilCrossbanEvent, BanUtilInvite,
-                          BanUtilSettings, BanUtilSubscription, GuildSettings)
+from shaak.helpers import MentionType, check_privildged, id2mention, datetime_repr, str2bool, bool2str
+from shaak.models import (BanUtilBanEvent, BanUtilCrossbanEvent, BanUtilInvite, BanUtilSettings,
+                          BanUtilSubscription, GuildSettings, BanUtilBlock)
 
 class BanUtils(BaseModule):
     
@@ -372,6 +372,11 @@ class BanUtils(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def bu_invite(self, ctx: commands.Context, target_guild_id: int):
 
+        target_guild = self.bot.get_guild(target_guild_id)
+        if target_guild == None:
+            await self.utils.respond(ctx, ResponseLevel.general_error, f'Guild with id {target_guild_id} not found')
+            return
+
         try:
             await BanUtilSubscription.get(from_guild_id=ctx.guild.id, to_guild_id=target_guild_id)
         except DoesNotExist:
@@ -382,6 +387,20 @@ class BanUtils(BaseModule):
                     from_guild_id=ctx.guild.id,
                     to_guild_id=target_guild_id
                 )
+                if not await BanUtilBlock.filter(blocked_id=ctx.guild.id).exists():
+                    foreign_settings = await BanUtilSettings.get(guild_id=target_guild_id)
+                    if foreign_settings.receive_invite_alerts and foreign_settings.foreign_log_channel != None:
+                        target_channel = target_guild.get_channel(foreign_settings.foreign_log_channel)
+                        if target_channel != None:
+                            await target_channel.send(embed=discord.Embed(
+                                title=f'Invite from {ctx.guild.name} ({ctx.guild.id})',
+                                description='\n'.join([
+                                    f'Accept with `bu.subscribe {ctx.guild.id}`',
+                                    f'Block guild with `bu.block {ctx.guild.id}`',
+                                    'Disable alerts with `bu.alerts off`'
+                                ])
+                            ))
+                
                 await self.utils.respond(ctx, ResponseLevel.success)
             else:
                 await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild already invited')
@@ -473,6 +492,7 @@ class BanUtils(BaseModule):
         await self.utils.respond(ctx, ResponseLevel.success)
     
     @commands.command('bu.subscribers')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def bu_subscribers(self, ctx: commands.Context):
 
         subscribers: List[BanUtilSubscription] = await BanUtilSubscription.filter(from_guild_id=ctx.guild.id).prefetch_related('to_guild').all()
@@ -489,6 +509,7 @@ class BanUtils(BaseModule):
             await self.utils.list_items(ctx, entries)
     
     @commands.command('bu.subscriptions')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def bu_subscriptions(self, ctx: commands.Context):
 
         subscriptions: List[BanUtilSubscription] = await BanUtilSubscription.filter(to_guild=ctx.guild.id).prefetch_related('from_guild').all()
@@ -503,3 +524,80 @@ class BanUtils(BaseModule):
                 else:
                     entries.append(f'{guild.name} ({guild.id})')
             await self.utils.list_items(ctx, entries)
+    
+    @commands.command('bu.block')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def bu_block(self, ctx: commands.Context, target_guild_id: int):
+
+        target_guild = self.bot.get_guild(target_guild_id)
+        if target_guild == None:
+            await self.utils.respond(ctx, ResponseLevel.general_error, f'Guild with id {target_guild_id} not found')
+            return
+
+        try:
+            block = await BanUtilBlock.get(
+                guild_id=ctx.guild.id,
+                blocked_id=target_guild_id
+            )
+        except DoesNotExist:
+            await BanUtilBlock.create(
+                guild_id=ctx.guild.id,
+                blocked_id=target_guild_id
+            )
+            await self.utils.respond(ctx, ResponseLevel.success)
+        else:
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild already blocked')
+
+    @commands.command('bu.unblock')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def bu_unblock(self, ctx: commands.Context, target_guild_id: int):
+
+        target_guild = self.bot.get_guild(target_guild_id)
+        if target_guild == None:
+            await self.utils.respond(ctx, ResponseLevel.general_error, f'Guild with id {target_guild_id} not found')
+            return
+
+        try:
+            block = await BanUtilBlock.get(
+                guild_id=ctx.guild.id,
+                blocked_id=target_guild_id
+            )
+        except DoesNotExist:
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not blocked')
+        else:
+            await block.delete()
+            await self.utils.respond(ctx, ResponseLevel.success)
+
+    @commands.command('bu.blocked')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def bu_blocks(self, ctx: commands.Context):
+
+        blocks: List[BanUtilBlock] = await BanUtilBlock.filter(guild_id=ctx.guild.id).prefetch_related('blocked').all()
+        if len(blocks) == 0:
+            await self.utils.respond(ctx, ResponseLevel.success, 'No blocks')
+        else:
+            entries = []
+            for block_entry in blocks:
+                guild = self.bot.get_guild(block_entry.blocked.id)
+                if guild == None:
+                    entries.append(block_entry.blocked.id)
+                else:
+                    entries.append(f'{guild.name} ({guild.id})')
+            await self.utils.list_items(ctx, entries)
+
+    @commands.command('bu.alerts')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def bu_alerts(self, ctx: commands.Context, new_value: Optional[str] = None):
+
+        module_settings = await BanUtilSettings.get(guild_id=ctx.guild.id)
+        if new_value == None:
+            await self.utils.respond(ctx, ResponseLevel.success, bool2str(module_settings.receive_invite_alerts))
+        else:
+            bool_value = str2bool(new_value)
+            if bool_value == None:
+                await self.utils.respond(ctx, ResponseLevel.general_error, 'Hm?')
+                return
+            else:
+                module_settings.receive_invite_alerts = bool_value
+            await module_settings.save(update_fields=['receive_invite_alerts'])
+            await self.utils.respond(ctx, ResponseLevel.success)

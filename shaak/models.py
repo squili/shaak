@@ -73,9 +73,10 @@ class PreviewFilter(Model):
     channel_id = fields.BigIntField     ()
 
 class BanUtilSettings(Model, ModuleSettingsMixin):
-    guild                = fields.ForeignKeyField ('models.Guild', related_name='ban_util_settings')
-    foreign_log_channel  = fields.BigIntField     (null=True)
-    domestic_log_channel = fields.BigIntField     (null=True)
+    guild                 = fields.ForeignKeyField ('models.Guild', related_name='ban_util_settings')
+    foreign_log_channel   = fields.BigIntField     (null=True)
+    domestic_log_channel  = fields.BigIntField     (null=True)
+    receive_invite_alerts = fields.BooleanField    (default=True)
 
 class BanUtilBanEvent(Model):
     guild           = fields.ForeignKeyField ('models.Guild', related_name='ban_util_ban_event')
@@ -104,3 +105,7 @@ class BanUtilInvite(Model):
 class BanUtilSubscription(Model):
     from_guild = fields.ForeignKeyField ('models.Guild', related_name='ban_utils_subscribers')
     to_guild   = fields.ForeignKeyField ('models.Guild', related_name='ban_utils_subscriptions')
+
+class BanUtilBlock(Model):
+    guild   = fields.ForeignKeyField ('models.Guild', related_name='ban_util_blocks')
+    blocked = fields.ForeignKeyField ('models.Guild', related_name='ban_util_blocked')

@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "ALTER TABLE \"banutilsettings\" ADD \"receive_invite_alerts\" BOOL NOT NULL  DEFAULT True"
+  ],
+  "downgrade": [
+    "ALTER TABLE \"banutilsettings\" DROP COLUMN \"receive_invite_alerts\""
+  ]
+}

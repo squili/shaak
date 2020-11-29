@@ -1,4 +1,14 @@
+### 1.0.6
+- New migration
+- Added permission checks for `bu.subscribers` and `bu.subscriptions` commands
+- Added `BanUtilBlock` model
+- Added invite alerts
+- Added guild invite alert blocks (`bu.block`, `bu.unblock`, `bu.blocks`)
+- Added `receive_invite_alerts` column to `BanUtilSettings` model
+- Added `bu.alert` command to set new setting column
+
 ### 1.0.5
+- New migration
 - Fixed close button not showing up on crossbans
 - Fixed AttributeError for `bu.subscribers` and `bu.subscriptions` commands
 - Case insensitive watches have their patterns set to lowercase. This helps with duplicate patterns. There's no migration for this, but it should slowly fix itself as time goes on.
