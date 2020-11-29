@@ -1,0 +1,24 @@
+site_name: Shaak
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: blue
+  font: false
+  logo: img/icon.png
+  favicon: img/favicon.ico
+  features:
+    - navigation.instant
+markdown_extensions:
+  - def_list
+repo_url: https://git.squi.live/squili/shaak
+repo_name: squili/shaak
+nav:
+  - Home: index.md
+  - Settings: settings.md
+  - Modules: 
+    - modules.md
+    - wordwatch.md
+    - previews.md
+    - banutils.md

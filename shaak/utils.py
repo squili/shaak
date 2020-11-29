@@ -202,6 +202,7 @@ class Utils(commands.Cog):
             title=f'{product_settings.bot_name} v{product_settings.bot_version} by {product_settings.author_name}',
             description='\n'.join([
                 f'Bot source: {product_settings.bot_repo}',
+                f'Docs: {product_settings.bot_docs}',
                 f'Support the author: {product_settings.author_donate}',
                 f'Platform: {platform_info()}'
             ]),

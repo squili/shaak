@@ -1,3 +1,7 @@
+### 1.0.7
+- Added docs
+- Added `bot_docs` field to `product.json`
+
 ### 1.0.6
 - New migration
 - Added permission checks for `bu.subscribers` and `bu.subscriptions` commands

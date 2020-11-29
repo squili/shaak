@@ -55,6 +55,7 @@ class ProductSettings:
     bot_name:      str
     bot_version:   str
     bot_repo:      str
+    bot_docs:      str
     author_name:   str
     author_page:   str
     author_donate: str
@@ -62,5 +63,5 @@ class ProductSettings:
 raw_settings = load_from_file('settings.json', ['token', 'database_url', 'status', 'owner_id'])
 app_settings = AppSettings(**raw_settings)
 
-raw_product = load_from_file('product.json', ['bot_name', 'bot_version', 'author_name', 'author_page', 'bot_repo', 'author_donate'])
+raw_product = load_from_file('product.json', ['bot_name', 'bot_version', 'bot_docs', 'author_name', 'author_page', 'bot_repo', 'author_donate'])
 product_settings = ProductSettings(**raw_product)

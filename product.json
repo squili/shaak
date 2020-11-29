@@ -1,7 +1,8 @@
 {
     "bot_name": "Shaak",
-    "bot_version": "1.0.6",
+    "bot_version": "1.1.0",
     "bot_repo": "https://git.squi.live/squili/shaak",
+    "bot_docs": "https://shaak.squi.live/",
     "author_name": "Squili",
     "author_page": "https://squi.live/",
     "author_donate": "https://ko-fi.com/squili"
