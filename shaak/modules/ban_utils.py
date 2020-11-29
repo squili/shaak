@@ -88,7 +88,7 @@ class BanUtils(BaseModule):
             title = f'{ban_event.target_id} banned'
         else:
             icon_url = target_user.avatar_url
-            title = f'{target_user.name}#{target_user.discriminator} banned'
+            title = f'{target_user.name}#{target_user.discriminator} ({ban_event.target_id}) banned'
 
         if ban_event.banner_id != None:
             banner_user = await self.utils.aggressive_resolve_user(ban_event.banner_id)
@@ -142,7 +142,7 @@ class BanUtils(BaseModule):
         if target_user == None:
             title = f'{crossban_event.event.target_id} banned in {source_guild.name}'
         else:
-            title = f'{target_user.name}#{target_user.discriminator} banned in {source_guild.name}'
+            title = f'{target_user.name}#{target_user.discriminator} ({crossban_event.event.target_id}) banned in {source_guild.name}'
             if icon_url == None:
                 icon_url = target_user.avatar_url
 
@@ -319,6 +319,7 @@ class BanUtils(BaseModule):
 
                             await new_message.add_reaction('📣')
                             await new_message.add_reaction('🔨')
+                            await new_message.add_reaction('❌')
                             await self.update_crossban_message(new_event)
 
                 event.reported = datetime.now()
@@ -474,7 +475,7 @@ class BanUtils(BaseModule):
     @commands.command('bu.subscribers')
     async def bu_subscribers(self, ctx: commands.Context):
 
-        subscribers: List[BanUtilSubscription] = await BanUtilSubscription.filter(from_guild_id=ctx.guild.id).all()
+        subscribers: List[BanUtilSubscription] = await BanUtilSubscription.filter(from_guild_id=ctx.guild.id).prefetch_related('to_guild').all()
         if len(subscribers) == 0:
             await self.utils.respond(ctx, ResponseLevel.success, 'No subscribers')
         else:
@@ -490,31 +491,15 @@ class BanUtils(BaseModule):
     @commands.command('bu.subscriptions')
     async def bu_subscriptions(self, ctx: commands.Context):
 
-        subscriptions: List[BanUtilSubscription] = await BanUtilSubscription.filter(to_guild=ctx.guild.id).all()
+        subscriptions: List[BanUtilSubscription] = await BanUtilSubscription.filter(to_guild=ctx.guild.id).prefetch_related('from_guild').all()
         if len(subscriptions) == 0:
             await self.utils.respond(ctx, ResponseLevel.success, 'No subscriptions')
         else:
             entries = []
             for subscriber in subscriptions:
-                guild = self.bot.get_guild(subscriber.to_guild.id)
+                guild = self.bot.get_guild(subscriber.from_guild.id)
                 if guild == None:
-                    entries.append(subscriber.to_guild.id)
+                    entries.append(subscriber.from_guild.id)
                 else:
                     entries.append(f'{guild.name} ({guild.id})')
             await self.utils.list_items(ctx, entries)
-
-    # debug
-    @commands.command('bu.reload')
-    async def reload(self, ctx: commands.Context, message_id: int):
-
-        try:
-            ban_event = await BanUtilBanEvent.get(message_id=message_id)
-        except DoesNotExist:
-            try:
-                crossban_event = await BanUtilCrossbanEvent.get(message_id=message_id)
-            except DoesNotExist:
-                print('uh oh')
-            else:
-                await self.update_crossban_message(crossban_event)
-        else:
-            await self.update_ban_message(ban_event)

@@ -93,6 +93,7 @@ class BanUtilCrossbanEvent(Model):
     event           = fields.ForeignKeyField ('models.BanUtilBanEvent', related_name='crossbans')
     message_id      = fields.BigIntField     ()
     message_channel = fields.BigIntField     ()
+    timestamp       = fields.DatetimeField   (auto_now_add=True)
     banned          = fields.BooleanField    (default=False)
     reported        = fields.DatetimeField   (default=None, null=True)
 

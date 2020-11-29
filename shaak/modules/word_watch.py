@@ -350,6 +350,9 @@ class WordWatch(BaseModule):
                 await self.utils.respond(ctx, ResponseLevel.general_error, f'Invalid setting {setting_name}.{raw_settings[setting_name]}')
                 return
         
+        if not parsed_settings['cased']:
+            patterns = [i.lower() for i in patterns]
+        
         if parsed_settings['type'] == MatchType.word and parsed_settings['cased']:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Match type `word` cannot be case sensitive')
             return

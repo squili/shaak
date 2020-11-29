@@ -1,3 +1,11 @@
+### 1.0.5
+- Fixed close button not showing up on crossbans
+- Fixed AttributeError for `bu.subscribers` and `bu.subscriptions` commands
+- Case insensitive watches have their patterns set to lowercase. This helps with duplicate patterns. There's no migration for this, but it should slowly fix itself as time goes on.
+- BU events now show user ids in the title
+- BU events are now cleaned up after 30 days
+- Crossban events now store their creation timestamp
+
 ### 1.0.4
 - Created migrations
 - Allowed more than one ban event to exist at any given time

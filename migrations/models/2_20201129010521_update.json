@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "ALTER TABLE \"banutilcrossbanevent\" ADD \"timestamp\" TIMESTAMPTZ NOT NULL  DEFAULT CURRENT_TIMESTAMP"
+  ],
+  "downgrade": [
+    "ALTER TABLE \"banutilcrossbanevent\" DROP COLUMN \"timestamp\""
+  ]
+}
