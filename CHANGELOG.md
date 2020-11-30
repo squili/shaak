@@ -1,4 +1,4 @@
-### 1.0.7
+### 1.1.0
 - Added docs
 - Added `bot_docs` field to `product.json`
 
