@@ -1,3 +1,7 @@
+### 1.1.1
+- Fixed help command
+- `ww.watch` with `ping.no` setting will remove ping group from an existing command
+
 ### 1.1.0
 - Added docs
 - Added `bot_docs` field to `product.json`

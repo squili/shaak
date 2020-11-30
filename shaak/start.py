@@ -22,7 +22,7 @@ import signal
 import discord
 from tortoise import Tortoise
 
-from shaak.custom_bot import CustomBot, get_command_prefix
+from shaak.custom_bot import CustomBot, get_command_prefix, CustomHelp
 from shaak.settings   import app_settings
 
 from shaak.manager    import Manager
@@ -68,7 +68,8 @@ async def start_bot():
     bot = CustomBot(
         command_prefix=get_command_prefix,
         intents=intents,
-        member_cache_flags=member_cache_flags
+        member_cache_flags=member_cache_flags,
+        help_command=CustomHelp()
     )
     
     # add cogs

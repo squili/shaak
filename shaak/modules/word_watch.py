@@ -23,8 +23,8 @@ from dataclasses import dataclass
 from typing      import Any, Callable, Dict, List, Optional, Union, Tuple
 
 import discord
-from discord.errors import HTTPException
-from discord.ext    import commands
+from discord.errors      import HTTPException
+from discord.ext         import commands
 from tortoise.exceptions import DoesNotExist
 
 from shaak.base_module import BaseModule
@@ -34,7 +34,7 @@ from shaak.errors      import InvalidId
 from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
                                get_int_ranges, getrange_s, id2mention,
                                link_to_message, mention2id, pluralize,
-                               resolve_mention, possesivize, chunks)
+                               resolve_mention, possesivize, chunks, str2bool)
 from shaak.matcher     import pattern_preprocess, text_preprocess, word_matches
 from shaak.settings    import product_settings
 from shaak.utils       import ResponseLevel, Utils
@@ -364,8 +364,11 @@ class WordWatch(BaseModule):
                     name=parsed_settings['ping']
                 )
             except DoesNotExist:
-                await self.utils.respond(ctx, ResponseLevel.general_error, f'Invalid ping group {parsed_settings["ping"]}')
-                return
+                if str2bool(parsed_settings['ping']) == False:
+                    group = None
+                else:
+                    await self.utils.respond(ctx, ResponseLevel.general_error, f'Invalid ping group {parsed_settings["ping"]}')
+                    return
         else:
             group = None
 

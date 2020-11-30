@@ -21,9 +21,10 @@ import asyncio
 import discord
 from discord.ext import commands
 
-from shaak.errors import ModuleDisabled, NotAllowed, InvalidId
-from shaak.consts import ResponseLevel
-from shaak.models import GuildSettings, GlobalSettings
+from shaak.errors   import ModuleDisabled, NotAllowed, InvalidId
+from shaak.consts   import ResponseLevel
+from shaak.models   import GuildSettings, GlobalSettings
+from shaak.settings import product_settings
 
 class CustomBot(commands.Bot):
 
@@ -77,3 +78,11 @@ async def get_command_prefix(bot: CustomBot, message: discord.Message) -> str:
             return guild_settings.prefix
     global_settings = await GlobalSettings.get(id=0)
     return global_settings.default_prefix
+
+class CustomHelp(commands.HelpCommand):
+
+    async def command_callback(self, ctx, *, command=None):
+
+        await ctx.send(embed=discord.Embed(
+            description=f'Read the [docs]({product_settings.bot_docs})!'
+        ))
