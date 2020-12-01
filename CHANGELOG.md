@@ -1,3 +1,7 @@
+### 1.1.2
+- Limited ban events to one per person (temporary fix for the garbage that goes on in that module)
+- Added mass ban command
+
 ### 1.1.1
 - Fixed help command
 - `ww.watch` with `ping.no` setting will remove ping group from an existing command

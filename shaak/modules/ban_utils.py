@@ -192,6 +192,9 @@ class BanUtils(BaseModule):
         for event in await BanUtilCrossbanEvent.filter(guild_id=guild.id, event__target_id=user.id).all():
             await self.update_event(event, self.update_crossban_message, True, '🔄', '🔨')
         
+        if await BanUtilBanEvent.filter(guild_id=guild.id, target_id=user.id).exists():
+            return
+        
         ban_user_id = None
         while ban_user_id == None:
             async for log_entry in guild.audit_logs(limit=100, action=discord.AuditLogAction.ban):
@@ -600,4 +603,23 @@ class BanUtils(BaseModule):
             else:
                 module_settings.receive_invite_alerts = bool_value
             await module_settings.save(update_fields=['receive_invite_alerts'])
+            await self.utils.respond(ctx, ResponseLevel.success)
+    
+    @commands.command('bu.bulk')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def bu_bulk(self, ctx: commands.Context, *ids: int):
+
+        success = 0
+        failure = 0
+        for id in ids:
+            try:
+                await ctx.guild.ban(PseudoId(id=id), reason=f'Massban by {ctx.author.id}')
+            except Exception as e:
+                print(e)
+                failure += 1
+            else:
+                success += 1
+        if failure > 0:
+            await self.utils.respond(ctx, ResponseLevel.general_error, f'Failed banning {failure}/{len(ids)} users')
+        else:
             await self.utils.respond(ctx, ResponseLevel.success)
