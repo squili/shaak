@@ -64,3 +64,4 @@ class Debug(commands.Cog):
         entries = []
         for guild in self.bot.guilds:
             entries.append(f'{guild.name} ({guild.id}) - {guild.member_count} members')
+        await self.utils.list_items(ctx, entries)
