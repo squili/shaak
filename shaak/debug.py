@@ -52,8 +52,15 @@ class Debug(commands.Cog):
             await command.reinvoke(await self.bot.get_context(ctx.message))
     
     @commands.command('debug.sql')
-    async def debug_query(self, ctx: commands.Context, *, query: str):
+    async def debug_sql(self, ctx: commands.Context, *, query: str):
 
         conn = Tortoise.get_connection('default')
         resp = await conn.execute_query(query)
         await self.utils.respond(ctx, ResponseLevel.success, repr(resp))
+    
+    @commands.command('debug.guilds')
+    async def debug_guilds(self, ctx: commands.Context):
+
+        entries = []
+        for guild in self.bot.guilds:
+            entries.append(f'{guild.name} ({guild.id}) - {guild.member_count} members')
