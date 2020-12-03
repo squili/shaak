@@ -29,7 +29,7 @@ from shaak.base_module import BaseModule
 from shaak.checks      import has_privlidged_role_check
 from shaak.consts      import ModuleInfo, ResponseLevel
 from shaak.errors      import InvalidId
-from shaak.helpers     import MentionType, mention2id, id2mention, pluralize, commas
+from shaak.helpers     import MentionType, mention2id, id2mention, pluralize, commas, id2mention
 from shaak.models      import PreviewSettings, PreviewFilter, Guild
 
 message_link_regex = re.compile(r'https://(?:\w+\.)?discord(?:app)?.com/channels/\d+/\d+/\d+')
@@ -67,6 +67,9 @@ class Previews(BaseModule):
             name=message.author.name + '#' + message.author.discriminator,
             icon_url=message.author.avatar_url
         )
+        embed.add_field(name='Channel', value=id2mention(channel_id, MentionType.channel))
+        embed.add_field(name='Author', value=id2mention(message.author.id, MentionType.user))
+
         await target_channel.send(embed=embed)
         if len(message.attachments) > 0:
             files = []

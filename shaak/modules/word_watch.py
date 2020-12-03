@@ -48,7 +48,6 @@ class WatchCacheEntry:
     match_type:    MatchType
     pattern:       str
     compiled:      Any
-    group_id: Optional[int]
     auto_delete:   bool
     ignore_case:   bool
 
@@ -86,12 +85,8 @@ class WordWatch(BaseModule):
             pattern=watch.pattern,
             auto_delete=watch.auto_delete,
             ignore_case=watch.ignore_case,
-            compiled=None,
-            group_id=None
+            compiled=None
         )
-
-        if watch.group != None:
-            cache_entry.group_id = watch.group.id
 
         if cache_entry.match_type == MatchType.regex:
             cache_entry.compiled = re.compile(cache_entry.pattern, re.IGNORECASE if cache_entry.ignore_case else 0)
@@ -212,8 +207,9 @@ class WordWatch(BaseModule):
             
             ping_groups = []
             for match in matches:
-                if match[0].group_id not in ping_groups:
-                    ping_groups.append(match[0].group_id)
+                watch = await WordWatchWatch.filter(id=match[0].id).prefetch_related('group').get()
+                if watch.group != None and watch.group.id not in ping_groups:
+                    ping_groups.append(watch.group.id)
             str_pings = set()
             for group in ping_groups:
                 pings = await WordWatchPing.filter(group=group).all()
@@ -446,14 +442,11 @@ class WordWatch(BaseModule):
         embed.set_footer(text=f'{page_number+1}/{page_max}')
         for index, item in items:
             field_name = f'`{index+1}`: {"word" if item.match_type == MatchType.word else "regex"}'
-            if item.group_id == None:
-                group = None
-            else:
-                group = await WordWatchPingGroup.get(id=item.group_id)
+            watch = await WordWatchWatch.filter(id=item.id).prefetch_related('group').get()
             name_extras = [i for i in (
                 'Autodelete' if item.auto_delete else None,
                 None if item.ignore_case else 'Cased',
-                None if group == None else f'Pings `{group.name}`'
+                None if watch.group == None else f'Pings `{watch.group.name}`'
             ) if i != None]
             if name_extras:
                 field_name += ' - ' + ', '.join(name_extras)

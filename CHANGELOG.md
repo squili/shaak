@@ -1,3 +1,7 @@
+### 1.1.3
+- Added `Channel` and `Author` fields to the preview embed
+- Moved watch's group id from cache to database
+
 ### 1.1.2
 - Limited ban events to one per person (temporary fix for the garbage that goes on in that module)
 - Added mass ban command
