@@ -56,7 +56,6 @@ class WatchCacheEntry:
             hash(self.id) + \
             hash(self.match_type) + \
             hash(self.pattern) + \
-            hash(self.group_id) + \
             hash(self.auto_delete) + \
             hash(self.ignore_case)
 

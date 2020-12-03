@@ -196,6 +196,7 @@ class BanUtils(BaseModule):
             return
         
         ban_user_id = None
+        ban_reason = 'No reason given'
         while ban_user_id == None:
             async for log_entry in guild.audit_logs(limit=100, action=discord.AuditLogAction.ban):
                 if log_entry.target == user:
@@ -229,7 +230,7 @@ class BanUtils(BaseModule):
                 message_channel=module_settings.domestic_log_channel,
                 target_id=user.id,
                 banner_id=ban_user_id,
-                ban_reason=ban_reason or 'No reason given'
+                ban_reason=ban_reason
             )
 
             await self.update_ban_message(ban_event)

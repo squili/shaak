@@ -53,7 +53,7 @@ class WordWatchPing(Model):
 
 class WordWatchWatch(Model):
     guild       = fields.ForeignKeyField ('models.Guild', related_name='word_watch_watches')
-    group       = fields.ForeignKeyField ('models.WordWatchPingGroup', related_name='watches', null=True, on_delete='SET NULL')
+    group       = fields.ForeignKeyField ('models.WordWatchPingGroup', related_name='watches', null=True, on_delete=fields.SET_NULL)
     pattern     = fields.TextField       ()
     match_type  = fields.IntField        ()
     auto_delete = fields.BooleanField    ()

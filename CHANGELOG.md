@@ -1,3 +1,7 @@
+### 1.1.4
+- Fixed BanUtils not catching bans with no reason
+- Fixed WordWatchCache `__hash__` function
+
 ### 1.1.3
 - Added `Channel` and `Author` fields to the preview embed
 - Moved watch's group id from cache to database
