@@ -79,6 +79,7 @@ class WordWatch(BaseModule):
         elif watch.match_type == MatchType.word:
             cache_entry.compiled = pattern_preprocess(watch.pattern)
         else:
+            print('cache received a bad watch object')
             await watch.delete()
             return None
 
