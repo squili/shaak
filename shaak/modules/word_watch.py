@@ -159,7 +159,7 @@ class WordWatch(BaseModule):
 
             watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
 
-            if watch.match_type == MatchType.regex:
+            if watch.match_type == MatchType.regex.value:
                 found = list(entry.compiled.finditer(message.content))
                 if found:
                     delete_message = delete_message or watch.auto_delete
@@ -168,7 +168,7 @@ class WordWatch(BaseModule):
                             watch, match.start(0), match.end(0)
                         ))
 
-            elif watch.match_type == MatchType.word:
+            elif watch.match_type == MatchType.word.value:
                 if processed_text == None:
                     processed_text = text_preprocess(message.content)
                 found = word_matches(processed_text, entry.compiled)
@@ -279,7 +279,7 @@ class WordWatch(BaseModule):
         if message.author == self.bot.user:
             return
         
-        if isinstance(message.channel, (discord.DMChannel, discord.GroupChannel)):
+        if not isinstance(message.channel, (discord.TextChannel)):
             return
 
         guild_prefix = await self.bot.command_prefix(self.bot, message)
@@ -428,17 +428,17 @@ class WordWatch(BaseModule):
         embed.set_footer(text=f'{page_number+1}/{page_max}')
         for index, item in items:
             watch: WordWatchWatch = await WordWatchWatch.filter(id=item.id).prefetch_related('group').get()
-            field_name = f'`{index+1}`: {"word" if watch.match_type == MatchType.word else "regex"}'
+            field_name = f'`{index+1}`: {"word" if watch.match_type == MatchType.word.value else "regex"}'
             name_extras = [i for i in (
-                'Autodelete' if item.auto_delete else None,
-                None if item.ignore_case else 'Cased',
+                'Autodelete' if watch.auto_delete else None,
+                None if watch.ignore_case else 'Cased',
                 None if watch.group == None else f'Pings `{watch.group.name}`'
             ) if i != None]
             if name_extras:
                 field_name += ' - ' + ', '.join(name_extras)
             embed.add_field(
                 name=field_name,
-                value='`' + item.pattern + '`',
+                value='`' + watch.pattern + '`',
                 inline=False
             )
         return embed

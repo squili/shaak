@@ -1,3 +1,7 @@
+### 1.1.7
+- Fixed some match type comparisons not using the enum values
+- Fixed `ww.list` throwing `AttributeError`s when you tried using it without the shitty old cache
+
 ### 1.1.6
 - Fixed an issue that caused the database to corrupt itself to try to remove nonexistant corruption
 
@@ -9,14 +13,14 @@
 ### 1.1.4
 - FATAL BUG; USE 1.1.6
 - Fixed BanUtils not catching bans with no reason
-- Fixed WordWatchCache `__hash__` function
+- Fixed `WordWatchCache` `__hash__` function
 
 ### 1.1.3
 - Added `Channel` and `Author` fields to the preview embed
 - Moved watch's group id from cache to database
 
 ### 1.1.2
-- Limited ban events to one per person (temporary fix for the garbage that goes on in that module)
+- Limited ban events to one per person
 - Added mass ban command
 
 ### 1.1.1
