@@ -1,8 +1,13 @@
+### 1.1.6
+- Fixed an issue that caused the database to corrupt itself to try to remove nonexistant corruption
+
 ### 1.1.5
+- FATAL BUG; USE 1.1.6
 - Fixed `ww.list_pings` not filtering by guild
 - Stripped down word cache even further
 
 ### 1.1.4
+- FATAL BUG; USE 1.1.6
 - Fixed BanUtils not catching bans with no reason
 - Fixed WordWatchCache `__hash__` function
 

@@ -74,13 +74,12 @@ class WordWatch(BaseModule):
             compiled=None
         )
 
-        if watch.match_type == MatchType.regex:
+        if watch.match_type == MatchType.regex.value:
             cache_entry.compiled = re.compile(watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
-        elif watch.match_type == MatchType.word:
+        elif watch.match_type == MatchType.word.value:
             cache_entry.compiled = pattern_preprocess(watch.pattern)
         else:
-            print('cache received a bad watch object')
-            await watch.delete()
+            print(f'ERR bad watch cache entry with id {watch.id}: {watch.match_type} is not a valid match type. this should never happen!')
             return None
 
         self.watch_cache[watch.guild.id].append(cache_entry)
