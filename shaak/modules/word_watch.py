@@ -45,19 +45,10 @@ from shaak.models      import (WordWatchSettings, WordWatchPingGroup, WordWatchP
 class WatchCacheEntry:
 
     id:            int
-    match_type:    MatchType
-    pattern:       str
     compiled:      Any
-    auto_delete:   bool
-    ignore_case:   bool
 
     def __hash__(self):
-        return \
-            hash(self.id) + \
-            hash(self.match_type) + \
-            hash(self.pattern) + \
-            hash(self.auto_delete) + \
-            hash(self.ignore_case)
+        return self.id
 
 class WordWatch(BaseModule):
     
@@ -80,17 +71,13 @@ class WordWatch(BaseModule):
         
         cache_entry = WatchCacheEntry(
             id=watch.id,
-            match_type=MatchType(watch.match_type),
-            pattern=watch.pattern,
-            auto_delete=watch.auto_delete,
-            ignore_case=watch.ignore_case,
             compiled=None
         )
 
-        if cache_entry.match_type == MatchType.regex:
-            cache_entry.compiled = re.compile(cache_entry.pattern, re.IGNORECASE if cache_entry.ignore_case else 0)
-        elif cache_entry.match_type == MatchType.word:
-            cache_entry.compiled = pattern_preprocess(cache_entry.pattern)
+        if watch.match_type == MatchType.regex:
+            cache_entry.compiled = re.compile(watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
+        elif watch.match_type == MatchType.word:
+            cache_entry.compiled = pattern_preprocess(watch.pattern)
         else:
             await watch.delete()
             return None
@@ -118,6 +105,7 @@ class WordWatch(BaseModule):
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
+
         await self.initialized.wait()
         
         if guild.id in self.watch_cache:
@@ -167,10 +155,12 @@ class WordWatch(BaseModule):
         delete_message = False
         matches = set()
         processed_text = None
-        for watch in self.watch_cache[message.guild.id]:
+        for entry in self.watch_cache[message.guild.id]:
+
+            watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
 
             if watch.match_type == MatchType.regex:
-                found = list(watch.compiled.finditer(message.content))
+                found = list(entry.compiled.finditer(message.content))
                 if found:
                     delete_message = delete_message or watch.auto_delete
                     for match in found:
@@ -181,7 +171,7 @@ class WordWatch(BaseModule):
             elif watch.match_type == MatchType.word:
                 if processed_text == None:
                     processed_text = text_preprocess(message.content)
-                found = word_matches(processed_text, watch.compiled)
+                found = word_matches(processed_text, entry.compiled)
                 if found:
                     delete_message = delete_message or watch.auto_delete
                     for match in found:
@@ -204,27 +194,24 @@ class WordWatch(BaseModule):
             if log_channel == None:
                 return
             
-            ping_groups = []
+            pings = set()
+            groups = set()
             for match in matches:
-                watch = await WordWatchWatch.filter(id=match[0].id).prefetch_related('group').get()
-                if watch.group != None and watch.group.id not in ping_groups:
-                    ping_groups.append(watch.group.id)
-            str_pings = set()
-            for group in ping_groups:
-                pings = await WordWatchPing.filter(group=group).all()
-                for ping in pings:
-                    str_pings.add(id2mention(ping.target_id, ping.ping_type))
-
+                if match[0].group != None and match[0].group.id not in groups:
+                    groups.add(match[0].group.id)
+                    await match[0].fetch_related('pings')
+                    for ping in match[0].pings:
+                        pings.add(id2mention(ping.target_id, ping.ping_type))
+            
             deduped_patterns = set([o[0].pattern for o in matches])
             pattern_list = commas([str(i) for i in deduped_patterns])
             pattern_list_code = commas([f"`{i}`" for i in deduped_patterns])
 
-            raw_segments = sorted(list(set(
-                [index                       for range_ in
-                [range(match[1], match[2]+1) for match  in matches]
-                                             for index  in range_]
-            ))) # p y t h o n i c
-            ranges = get_int_ranges(raw_segments)
+            ranges = get_int_ranges(set(
+                (index                       for range_ in
+                (range(match[1], match[2]+1) for match  in matches)
+                                             for index  in range_)
+            )) # p y t h o n i c
 
             message_embed = discord.Embed(
                 color=discord.Color(0xd22513),
@@ -259,10 +246,10 @@ class WordWatch(BaseModule):
                 )
             else:
                 content = ''
-            if str_pings:
+            if pings:
                 if content:
                     content += ' '
-                content += ''.join(str_pings)
+                content += ''.join(pings)
                 if len(content) > 2000:
                     content = content[len(content)-2000:]
 
@@ -440,8 +427,8 @@ class WordWatch(BaseModule):
         )
         embed.set_footer(text=f'{page_number+1}/{page_max}')
         for index, item in items:
-            field_name = f'`{index+1}`: {"word" if item.match_type == MatchType.word else "regex"}'
-            watch = await WordWatchWatch.filter(id=item.id).prefetch_related('group').get()
+            watch: WordWatchWatch = await WordWatchWatch.filter(id=item.id).prefetch_related('group').get()
+            field_name = f'`{index+1}`: {"word" if watch.match_type == MatchType.word else "regex"}'
             name_extras = [i for i in (
                 'Autodelete' if item.auto_delete else None,
                 None if item.ignore_case else 'Cased',
@@ -473,8 +460,7 @@ class WordWatch(BaseModule):
     async def ww_clear_watches(self, ctx: commands.Context):
 
         if ctx.guild.id in self.watch_cache:
-            to_delete = await WordWatchWatch.filter(guild_id=ctx.guild.id).all()
-            [await watch.delete() for watch in to_delete]
+            await WordWatchWatch.filter(guild_id=ctx.guild.id).delete()
             self.watch_cache[ctx.guild.id] = []
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
@@ -775,7 +761,7 @@ class WordWatch(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_list_pings(self, ctx: commands.Context, group_name: str):
 
-        pings = await WordWatchPing.filter(group__name=group_name).all()
+        pings = await WordWatchPing.filter(group__name=group_name, group__guild_id=ctx.guild.id).all()
         entries = []
         for ping in pings:
             entries.append(id2mention(ping.target_id, ping.ping_type))

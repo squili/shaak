@@ -1,3 +1,7 @@
+### 1.1.5
+- Fixed `ww.list_pings` not filtering by guild
+- Stripped down word cache even further
+
 ### 1.1.4
 - Fixed BanUtils not catching bans with no reason
 - Fixed WordWatchCache `__hash__` function
