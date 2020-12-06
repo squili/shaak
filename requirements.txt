@@ -1,5 +1,8 @@
+# we need intents to connect to current discord api
 discord.py>=1.5
-tortoise-orm[asyncpg]
+# older versions of tortoise contain an injection vulnerability that we don't want
+tortoise-orm[asyncpg]>=0.16.6
 python-rapidjson
 ciso8601
+# new version of aerich doesn't work that well
 aerich==0.3.3

@@ -41,23 +41,35 @@ class Previews(BaseModule):
         settings=PreviewSettings
     )
 
-    async def send_message_preview(self, target_channel: discord.TextChannel, link: str) -> int:
+    async def send_message_preview(self, target_channel: discord.TextChannel, link: str, checking_user: discord.User) -> int:
 
         try:
             parts = link.split('/')
+            guild_id = int(parts[-3])
             channel_id = int(parts[-2])
             message_id = int(parts[-1])
         except (IndexError, ValueError):
             return 1
 
-        channel = self.bot.get_channel(channel_id)
-        if channel == None:
+        guild = self.bot.get_guild(guild_id)
+        if guild == None:
             return 2
+        
+        if not checking_user in guild.members:
+            return 3
+
+        channel = guild.get_channel(channel_id)
+        if channel == None:
+            return 4
+        
+        channel_perms = channel.permissions_for(checking_user)
+        if not channel_perms.read_messages:
+            return 5
         
         try:
             message = await channel.fetch_message(message_id)
         except (discord.NotFound, discord.Forbidden):
-            return 3
+            return 6
         
         embed = discord.Embed(
             description=message.content,
@@ -71,6 +83,9 @@ class Previews(BaseModule):
         embed.add_field(name='Author', value=id2mention(message.author.id, MentionType.user))
 
         await target_channel.send(embed=embed)
+        if len(message.embeds) > 0:
+            for embed in message.embeds:
+                await target_channel.send(embed=embed)
         if len(message.attachments) > 0:
             files = []
             for attachment in message.attachments:
@@ -94,17 +109,23 @@ class Previews(BaseModule):
                 log_channel = self.bot.get_channel(module_settings.log_channel)
             
             for match in matches:
-                await self.send_message_preview(log_channel or message.channel, match)
+                await self.send_message_preview(log_channel or message.channel, match, message.author)
     
     @commands.command('pv.view')
     async def pv_view(self, ctx: commands.Context, link: str):
 
-        err = await self.send_message_preview(ctx.channel, link)
-        if err == 1:
+        err = await self.send_message_preview(ctx.channel, link, ctx.author)
+        if   err == 1:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Malformed message link')
         elif err == 2:
-            await self.utils.respond(ctx, ResponseLevel.general_error, 'Channel not found')
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not found')
         elif err == 3:
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'You are not in that guild')
+        elif err == 4:
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'Channel not found')
+        elif err == 5:
+            await self.utils.respond(ctx, ResponseLevel.general_error, "You don't have permission to view this message")
+        elif err == 6:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Message not found')
     
     @commands.command('pv.add')

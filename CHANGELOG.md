@@ -1,3 +1,9 @@
+### 1.1.8
+- Allowed users to be ignored
+- Message previews now show embeds
+- Added permission checks to previews
+- Added a message scan queue to prevent memory leakage under high demand
+
 ### 1.1.7
 - Fixed some match type comparisons not using the enum values
 - Fixed `ww.list` throwing `AttributeError`s when you tried using it without the shitty old cache

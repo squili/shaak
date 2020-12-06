@@ -100,7 +100,6 @@ async def start_bot():
         print('Starting bot')
         await bot.start(app_settings.token, reconnect=True)
     except discord.PrivilegedIntentsRequired:
-        # we currently don't use any privlidged intents, but we could one day
         print('An intent is required! Please go to https://discord.com/developers/applications/ and enable it.')
         exit(1)
     finally:

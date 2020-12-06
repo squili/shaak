@@ -18,6 +18,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
+import asyncio
 import re
 import platform
 from datetime import datetime
@@ -74,7 +75,7 @@ def mention2id_validate(mention_type: MentionType):
         return mention2id(mention, mention_type)
     return wrapped
 
-def mention2id(mention: str, mention_type: MentionType) -> Optional[int]:
+def mention2id(mention: str, mention_type: Optional[MentionType] = None) -> Optional[int]:
 
     try:
         return _mention2id(mention, mention_type)
@@ -82,10 +83,10 @@ def mention2id(mention: str, mention_type: MentionType) -> Optional[int]:
         raise InvalidId()
 
 regex_mention2id = re.compile(r'<((?:@!)|(?:@&)|(?:#))(\d+)>')
-def _mention2id(mention: str, mention_type: MentionType) -> Optional[int]:
+def _mention2id(mention: str, mention_type: Optional[MentionType]) -> Optional[int]:
 
     if (match := regex_mention2id.match(mention)):
-        if match.group(1) != mention_type:
+        if mention_type != None and match.group(1) != mention_type:
             raise InvalidId()
         return int(match.group(2))
     return int(mention)
@@ -195,3 +196,18 @@ def possesivize(word: str) -> str:
     if word.endswith('s'):
         return word + "'"
     return word + "'s"
+
+class DiscardingQueue:
+
+    def __init__(self, max_size: int):
+        self.max_size = max_size
+        self._queue = asyncio.Queue(max_size)
+    
+    @property
+    def get(self):
+        return self._queue.get
+    
+    async def put(self, item):
+        while self._queue.full():
+            self._queue.get_nowait()
+        return await self._queue.put(item)
