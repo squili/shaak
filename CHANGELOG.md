@@ -1,3 +1,6 @@
+## 1.2.0rc1
+- Fixed an issue causing watch entries with an assigned ping group to not ping correctly
+
 ### 1.2.0rc0
 - New migration
 - New docs

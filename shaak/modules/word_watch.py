@@ -37,9 +37,9 @@ from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
                                DiscardingQueue)
 from shaak.matcher  import pattern_preprocess, text_preprocess, word_matches
 from shaak.models   import (WordWatchSettings, WordWatchPingGroup, WordWatchPing,
+                            WordWatchWatch, WordWatchIgnore, Guild)
 from shaak.settings import product_settings
 from shaak.utils    import ResponseLevel
-                               WordWatchWatch, WordWatchIgnore, Guild)
 
 @dataclass
 class WatchCacheEntry:
@@ -206,8 +206,8 @@ class WordWatch(BaseModule):
             for match in matches:
                 if match[0].group != None and match[0].group.id not in groups:
                     groups.add(match[0].group.id)
-                    await match[0].fetch_related('pings')
-                    for ping in match[0].pings:
+                    await match[0].group.fetch_related('pings')
+                    for ping in match[0].group.pings:
                         pings.add(id2mention(ping.target_id, ping.ping_type))
             
             deduped_patterns = set([o[0].pattern for o in matches])
