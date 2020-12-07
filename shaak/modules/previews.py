@@ -17,7 +17,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 '''
 
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
-import io
 import re
 from typing import Optional
 
@@ -29,7 +28,7 @@ from shaak.base_module import BaseModule
 from shaak.checks      import has_privlidged_role_check
 from shaak.consts      import ModuleInfo, ResponseLevel
 from shaak.errors      import InvalidId
-from shaak.helpers     import MentionType, mention2id, id2mention, pluralize, commas, id2mention
+from shaak.helpers     import MentionType, mention2id, id2mention, pluralize, commas
 from shaak.models      import PreviewSettings, PreviewFilter, Guild
 
 message_link_regex = re.compile(r'https://(?:\w+\.)?discord(?:app)?.com/channels/\d+/\d+/\d+')

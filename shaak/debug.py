@@ -18,15 +18,13 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
-import asyncio
-from copy import deepcopy
 from typing import Optional
 
 from discord.ext import commands
-from tortoise import Tortoise
+from tortoise    import Tortoise
 
 from shaak.settings import app_settings
-from shaak.consts import ResponseLevel
+from shaak.consts   import ResponseLevel
 
 class Debug(commands.Cog):
     

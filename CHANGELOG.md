@@ -1,3 +1,14 @@
+### 1.2.0rc0
+- New migration
+- New docs
+- Added BanUtils invite messages with react buttons
+- Added BanUtils subscibe/kick notifications
+- Renamed `bu.bulk` to `massban`
+- Added a more descriptive error message for `massban`
+- Added `massrole`
+- Finished documentation
+- Cleaned up imports
+
 ### 1.1.8
 - Allowed users to be ignored
 - Message previews now show embeds

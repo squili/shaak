@@ -18,12 +18,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
-import asyncio
-from typing import Callable, List, Dict, Optional
+from typing import Dict, Optional
 
 import discord
 from discord.ext import commands
-from tortoise.exceptions import DoesNotExist
 
 from shaak.checks     import has_privlidged_role_check
 from shaak.consts     import ModuleInfo, ResponseLevel, setting_structure

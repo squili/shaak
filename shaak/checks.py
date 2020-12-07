@@ -18,19 +18,19 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from discord.ext import commands
 
+from shaak.errors  import NotAllowed
 from shaak.helpers import check_privildged
-from shaak.errors import NotAllowed
-
-async def has_privlidged_role(ctx: commands.Context):
-
-    privildged = await check_privildged(ctx.guild, ctx.author)
-    if privildged == None:
-        return False
-    elif privildged == True:
-        return True
-    elif privildged == False:
-        raise NotAllowed()
 
 def has_privlidged_role_check():
+
+    async def predicate(ctx: commands.Context):
+
+        privildged = await check_privildged(ctx.guild, ctx.author)
+        if privildged == None:
+            return False
+        elif privildged == True:
+            return True
+        elif privildged == False:
+            raise NotAllowed()
     
-    return commands.check(has_privlidged_role)
+    return commands.check(predicate)

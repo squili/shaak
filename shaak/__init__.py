@@ -20,11 +20,9 @@ import asyncio
 import json
 from pathlib import Path
 
-import discord
-from discord.ext import commands
 from tortoise import Tortoise
 
-from shaak.models import Guild, GlobalSettings
+from shaak.models import GlobalSettings
 
 def ask_user(msg: str, default_true: bool = True):
     return input(f'{msg} [{"Y" if default_true else "y"}/{"n" if default_true else "N"}] ').strip().lower()[0:] in (['y', ''] if default_true else ['y'])

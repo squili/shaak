@@ -22,10 +22,9 @@ import asyncio
 import re
 import platform
 from datetime import datetime
-from typing import Optional, List, Any, Tuple, Union, TypeVar
+from typing   import Optional, List, Any, Tuple, Union, TypeVar
 
 import discord
-from discord.ext import commands
 
 from shaak.errors import InvalidId
 from shaak.models import GuildSettings

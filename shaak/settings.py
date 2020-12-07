@@ -19,7 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 import dataclasses
 import json
 from pathlib import Path
-from typing import List
+from typing  import List
 
 def load_from_file(file_name: str, required_fields: List[str]):
 

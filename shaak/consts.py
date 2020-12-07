@@ -17,14 +17,15 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 '''
 
 from dataclasses import dataclass
-from datetime import timedelta
-from enum import Enum
+from datetime    import timedelta
+from enum        import Enum
 
 import ormar
 import discord
 from discord.ext import commands
 
-from shaak.helpers import str2bool, bool2str, mention2id_validate, id2mention_validate, MentionType, ensurebool, pass_value
+from shaak.helpers import (str2bool, bool2str, mention2id_validate, MentionType,
+                           id2mention_validate, ensurebool, pass_value)
 
 bu_invite_timeout = timedelta(days=3)
 
@@ -44,10 +45,6 @@ class ModuleInfo:
 class TaskInfo:
     name:      str
     wait_time: float
-
-@dataclass
-class PseudoId:
-    id: int
 
 color_green = discord.Color(0x2ecc71)
 color_red   = discord.Color(0xd22513)

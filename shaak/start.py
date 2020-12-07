@@ -25,10 +25,10 @@ from tortoise import Tortoise
 from shaak.custom_bot import CustomBot, get_command_prefix, CustomHelp
 from shaak.settings   import app_settings
 
-from shaak.manager    import Manager
-from shaak.conductor  import Conductor
-from shaak.utils      import Utils
-from shaak.debug      import Debug
+from shaak.manager   import Manager
+from shaak.conductor import Conductor
+from shaak.utils     import Utils
+from shaak.debug     import Debug
 
 from shaak.modules.word_watch import WordWatch
 from shaak.modules.previews   import Previews

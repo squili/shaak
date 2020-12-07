@@ -17,7 +17,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 '''
 
 from tortoise.models import Model
-from tortoise import fields
+from tortoise        import fields
 
 class ModuleSettingsMixin:
     enabled = fields.BooleanField (default=False)
@@ -101,6 +101,7 @@ class BanUtilCrossbanEvent(Model):
 class BanUtilInvite(Model):
     from_guild = fields.ForeignKeyField ('models.Guild', related_name='ban_utils_outgoing_invites')
     to_guild   = fields.ForeignKeyField ('models.Guild', related_name='ban_utils_incoming_invites')
+    message_id = fields.BigIntField     (null=True)
 
 class BanUtilSubscription(Model):
     from_guild = fields.ForeignKeyField ('models.Guild', related_name='ban_utils_subscribers')

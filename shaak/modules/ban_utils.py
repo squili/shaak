@@ -19,22 +19,20 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 # pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
 import asyncio
-import time
-from datetime import datetime, timedelta
-from typing import List, Optional, Union
+from datetime import datetime
+from typing   import List, Optional, Union
 
 import discord
-from discord.ext import commands
-from tortoise.exceptions import DoesNotExist
+from discord.ext           import commands
+from tortoise.exceptions   import DoesNotExist
 from tortoise.transactions import in_transaction
 
 from shaak.base_module import BaseModule
-from shaak.checks import has_privlidged_role_check
-from shaak.consts import (ModuleInfo, ResponseLevel, bu_invite_timeout,
-                          color_red, PseudoId)
-from shaak.helpers import MentionType, check_privildged, id2mention, datetime_repr, str2bool, bool2str
-from shaak.models import (BanUtilBanEvent, BanUtilCrossbanEvent, BanUtilInvite, BanUtilSettings,
-                          BanUtilSubscription, GuildSettings, BanUtilBlock)
+from shaak.checks      import has_privlidged_role_check
+from shaak.consts      import ModuleInfo, ResponseLevel, color_red
+from shaak.helpers     import check_privildged, datetime_repr, str2bool, bool2str
+from shaak.models      import (BanUtilBanEvent, BanUtilCrossbanEvent, BanUtilInvite,
+                               BanUtilSettings, BanUtilSubscription, BanUtilBlock)
 
 class BanUtils(BaseModule):
     
@@ -246,14 +244,14 @@ class BanUtils(BaseModule):
             await self.update_event(event, self.update_ban_message, False, '🔨', '🔄')
         for event in await BanUtilCrossbanEvent.filter(guild_id=guild.id, event__target_id=user.id).all():
             await self.update_event(event, self.update_crossban_message, False, '🔨', '🔄')
-
+    
     # we have to use the raw reaction event because rapptz hates me
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
 
         if payload.user_id == self.bot.user.id \
             or payload.emoji.is_custom_emoji() \
-            or payload.emoji.name not in ['📣', '🔄', '🔨', '❌']:
+            or payload.emoji.name not in ['📣', '🔄', '🔨', '❌', '✅', '⏹️', '⛔']:
             return
 
         guild = self.bot.get_guild(payload.guild_id)
@@ -263,114 +261,168 @@ class BanUtils(BaseModule):
         if message.author != self.bot.user or len(message.embeds) != 1:
             return
         
-        # we reuse the same code for both event types. get ready for a mess!
-        try:
-            event = await BanUtilBanEvent.get(message_id=message.id)
-        except DoesNotExist:
+        if payload.emoji.name in ['✅', '⏹️', '⛔']:
+            # invite alerts
+
             try:
-                event = await BanUtilCrossbanEvent.get(message_id=message.id).prefetch_related('event')
+                invite = await BanUtilInvite.filter(message_id=message.id).prefetch_related('from_guild', 'to_guild').get()
             except DoesNotExist:
                 await message.clear_reactions()
                 return
+            
+            if payload.emoji.name == '✅':
+
+                try:
+                    await BanUtilSubscription.get(
+                        from_guild_id=invite.from_guild.id,
+                        to_guild_id=invite.to_guild.id
+                    )
+                except DoesNotExist:
+                    await BanUtilSubscription.create(
+                        from_guild_id=invite.from_guild.id,
+                        to_guild_id=invite.to_guild.id
+                    )
+
+                    foreign_settings = await BanUtilSettings.get(guild_id=invite.from_guild.id)
+                    if foreign_settings.foreign_log_channel != None:
+                        target_channel = self.bot.get_channel(foreign_settings.foreign_log_channel)
+                        if target_channel != None:
+                            await target_channel.send(embed=discord.Embed(
+                                color=discord.Color.green(),
+                                description=f'Subscription from {guild.name} ({guild.id})'
+                            ))
+            
+            elif payload.emoji.name == '⏹️':
+
+                try:
+                    block = await BanUtilBlock.get(
+                        guild_id=invite.to_guild.id,
+                        blocked_id=invite.from_guild.id
+                    )
+                except DoesNotExist:
+                    await BanUtilBlock.create(
+                        guild_id=invite.to_guild.id,
+                        blocked_id=invite.from_guild.id
+                    )
+
+            elif payload.emoji.name == '⛔':
+
+                await BanUtilSettings.filter(guild_id=invite.to_guild.id).update(receive_invite_alerts=False)
+
+            await invite.delete()
+            await message.clear_reactions()
+
+        else:
+            # bans
+
+            # we reuse the same code for both event types. get ready for a mess!
+            try:
+                event = await BanUtilBanEvent.get(message_id=message.id)
+            except DoesNotExist:
+                try:
+                    event = await BanUtilCrossbanEvent.get(message_id=message.id).prefetch_related('event')
+                except DoesNotExist:
+                    await message.clear_reactions()
+                    return
+                else:
+                    is_ban_event = False
             else:
-                is_ban_event = False
-        else:
-            is_ban_event = True
+                is_ban_event = True
 
-        user = self.bot.get_user(payload.user_id)
-        
-        privilidged = await check_privildged(guild, guild.get_member(user.id))
-        if privilidged:
-            ban_perms = True
-            crosspost_perms = True
-            delete_perms = True
-        else:
-            permissions = user.permissions_in(channel)
-            ban_perms = permissions.ban_members
-            crosspost_perms = permissions.manage_guild
-            delete_perms = permissions.manage_guild
+            user = self.bot.get_user(payload.user_id)
+            
+            privilidged = await check_privildged(guild, guild.get_member(user.id))
+            if privilidged:
+                ban_perms = True
+                crosspost_perms = True
+                delete_perms = True
+            else:
+                permissions = user.permissions_in(channel)
+                ban_perms = permissions.ban_members
+                crosspost_perms = permissions.manage_guild
+                delete_perms = permissions.manage_guild
 
-        if payload.emoji.name == '📣' and crosspost_perms:
-            await message.add_reaction('📨')
+            if payload.emoji.name == '📣' and crosspost_perms:
+                await message.add_reaction('📨')
 
-            async with self.report_locks[guild.id]:
+                async with self.report_locks[guild.id]:
+                    if is_ban_event:
+                        ban_event = event
+                    else:
+                        ban_event = event.event
+
+                    subscribed: List[BanUtilSubscription] = await BanUtilSubscription.filter(from_guild_id=guild.id).prefetch_related('to_guild').all()
+                    for subscriber in subscribed:
+                        existing_mirrors = await BanUtilCrossbanEvent.filter(event=ban_event, guild=subscriber.to_guild).exists()
+                        if not existing_mirrors:
+                            module_settings: BanUtilSettings = await BanUtilSettings.get(guild=subscriber.to_guild)
+                            if module_settings.foreign_log_channel:
+
+                                target_channel = self.bot.get_channel(module_settings.foreign_log_channel)
+                                new_message = await target_channel.send(
+                                    embed=discord.Embed(
+                                        color=discord.Color(0xFFFFFF),
+                                        description='📨'
+                                    )
+                                )
+
+                                new_event = await BanUtilCrossbanEvent.create(
+                                    guild=subscriber.to_guild,
+                                    event=ban_event,
+                                    message_id=new_message.id,
+                                    message_channel=module_settings.foreign_log_channel
+                                )
+
+                                await new_message.add_reaction('📣')
+                                await new_message.add_reaction('🔨')
+                                await new_message.add_reaction('❌')
+                                await self.update_crossban_message(new_event)
+
+                    event.reported = datetime.now()
+                    await event.save(update_fields=['reported'])
+
+                if is_ban_event:
+                    await self.update_ban_message(event)
+                else:
+                    await self.update_crossban_message(event)
+                await message.remove_reaction('📨', self.bot.user)
+            elif payload.emoji.name == '🔄' and event.banned and ban_perms:
+
                 if is_ban_event:
                     ban_event = event
                 else:
                     ban_event = event.event
+                try:
+                    await guild.unban(discord.Object(ban_event.target_id), reason=f'BanUtils action by {user.id}')
+                except discord.HTTPException as e:
+                    if e.code == 10026:
+                        pass
+                else:
+                    await message.add_reaction('📨')
+            
+            elif payload.emoji.name == '🔨' and not event.banned and ban_perms:
 
-                subscribed: List[BanUtilSubscription] = await BanUtilSubscription.filter(from_guild_id=guild.id).prefetch_related('to_guild').all()
-                for subscriber in subscribed:
-                    existing_mirrors = await BanUtilCrossbanEvent.filter(event=ban_event, guild=subscriber.to_guild).exists()
-                    if not existing_mirrors:
-                        module_settings: BanUtilSettings = await BanUtilSettings.get(guild=subscriber.to_guild)
-                        if module_settings.foreign_log_channel:
-
-                            target_channel = self.bot.get_channel(module_settings.foreign_log_channel)
-                            new_message = await target_channel.send(
-                                embed=discord.Embed(
-                                    color=discord.Color(0xFFFFFF),
-                                    description='📨'
-                                )
-                            )
-
-                            new_event = await BanUtilCrossbanEvent.create(
-                                guild=subscriber.to_guild,
-                                event=ban_event,
-                                message_id=new_message.id,
-                                message_channel=module_settings.foreign_log_channel
-                            )
-
-                            await new_message.add_reaction('📣')
-                            await new_message.add_reaction('🔨')
-                            await new_message.add_reaction('❌')
-                            await self.update_crossban_message(new_event)
-
-                event.reported = datetime.now()
-                await event.save(update_fields=['reported'])
-
-            if is_ban_event:
-                await self.update_ban_message(event)
-            else:
-                await self.update_crossban_message(event)
-            await message.remove_reaction('📨', self.bot.user)
-        elif payload.emoji.name == '🔄' and event.banned and ban_perms:
-
-            if is_ban_event:
-                ban_event = event
-            else:
-                ban_event = event.event
-            try:
-                await guild.unban(PseudoId(ban_event.target_id), reason=f'BanUtils action by {user.id}')
-            except discord.HTTPException as e:
-                if e.code == 10026:
-                    pass
-            else:
+                if is_ban_event:
+                    ban_event = event
+                else:
+                    ban_event = event.event
+                await guild.ban(discord.Object(ban_event.target_id), reason=f'BanUtils action by {user.id}\n#BUIgnore')
                 await message.add_reaction('📨')
-        
-        elif payload.emoji.name == '🔨' and not event.banned and ban_perms:
+            
+            elif payload.emoji.name == '❌' and delete_perms:
 
-            if is_ban_event:
-                ban_event = event
+                await event.delete()
+                await message.clear_reactions()
+                event.id = None
+                if is_ban_event:
+                    await self.update_ban_message(event)
+                else:
+                    await self.update_crossban_message(event)
+            
             else:
-                ban_event = event.event
-            await guild.ban(PseudoId(ban_event.target_id), reason=f'BanUtils action by {user.id}\n#BUIgnore')
-            await message.add_reaction('📨')
+                return
         
-        elif payload.emoji.name == '❌' and delete_perms:
-
-            await event.delete()
-            await message.clear_reactions()
-            event.id = None
-            if is_ban_event:
-                await self.update_ban_message(event)
-            else:
-                await self.update_crossban_message(event)
-        
-        else:
-            return
-        
-        await message.remove_reaction(payload.emoji, user)
+            await message.remove_reaction(payload.emoji, user)
         
     @commands.command('bu.invite')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
@@ -380,6 +432,10 @@ class BanUtils(BaseModule):
         if target_guild == None:
             await self.utils.respond(ctx, ResponseLevel.general_error, f'Guild with id {target_guild_id} not found')
             return
+        
+        if target_guild_id == ctx.guild.id:
+            await self.utils.respond(ctx, ResponseLevel.general_error, "That's you!")
+            return
 
         try:
             await BanUtilSubscription.get(from_guild_id=ctx.guild.id, to_guild_id=target_guild_id)
@@ -387,25 +443,38 @@ class BanUtils(BaseModule):
             try:
                 await BanUtilInvite.get(from_guild_id=ctx.guild.id, to_guild_id=target_guild_id)
             except DoesNotExist:
-                await BanUtilInvite.create(
-                    from_guild_id=ctx.guild.id,
-                    to_guild_id=target_guild_id
-                )
-                if not await BanUtilBlock.filter(blocked_id=ctx.guild.id).exists():
+                if await BanUtilBlock.filter(blocked_id=ctx.guild.id).exists():
+                    await self.utils.respond(ctx, ResponseLevel.forbidden, 'You are blocked from inviting this guild')
+                else:
+
+                    message_id = None
                     foreign_settings = await BanUtilSettings.get(guild_id=target_guild_id)
+
                     if foreign_settings.receive_invite_alerts and foreign_settings.foreign_log_channel != None:
                         target_channel = target_guild.get_channel(foreign_settings.foreign_log_channel)
                         if target_channel != None:
-                            await target_channel.send(embed=discord.Embed(
+
+                            new_message = await target_channel.send(embed=discord.Embed(
+                                color=discord.Color.green(),
                                 title=f'Invite from {ctx.guild.name} ({ctx.guild.id})',
                                 description='\n'.join([
-                                    f'Accept with `bu.subscribe {ctx.guild.id}`',
-                                    f'Block guild with `bu.block {ctx.guild.id}`',
-                                    'Disable alerts with `bu.alerts off`'
+                                    'Accept with ✅',
+                                    'Block guild with ⏹️',
+                                    'Disable alerts with ⛔'
                                 ])
                             ))
-                
-                await self.utils.respond(ctx, ResponseLevel.success)
+                            await new_message.add_reaction('✅')
+                            await new_message.add_reaction('⏹️')
+                            await new_message.add_reaction('⛔')
+                            message_id = new_message.id
+                            
+                    await BanUtilInvite.create(
+                        from_guild_id=ctx.guild.id,
+                        to_guild_id=target_guild_id,
+                        message_id=message_id
+                    )
+                    
+                    await self.utils.respond(ctx, ResponseLevel.success)
             else:
                 await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild already invited')
         else:
@@ -429,16 +498,28 @@ class BanUtils(BaseModule):
             except DoesNotExist:
                 await self.utils.respond(ctx, ResponseLevel.forbidden, 'That guild has not invited this guild')
             else:
+
                 await invite.delete()
                 await BanUtilSubscription.create(
                     from_guild_id=source_guild_id,
                     to_guild_id=ctx.guild.id
                 )
                 await self.utils.respond(ctx, ResponseLevel.success)
+
                 module_settings: BanUtilSettings = await BanUtilSettings.get(guild_id=ctx.guild.id)
                 if module_settings.foreign_log_channel == None:
                     await self.utils.respond(ctx, ResponseLevel.general_error,
                         "WARNING: No foreign event channel set, so you won't receive events from this server!")
+
+                foreign_settings = await BanUtilSettings.get(guild_id=invite.from_guild.id)
+                if foreign_settings.foreign_log_channel != None:
+                    target_channel = self.bot.get_channel(foreign_settings.foreign_log_channel)
+                    if target_channel != None:
+                        await target_channel.send(embed=discord.Embed(
+                            color=discord.Color.green(),
+                            description=f'Subscription from {ctx.guild.name} ({ctx.guild.id})'
+                        ))
+                        
         else:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Already subscribed to that guild')
     
@@ -477,9 +558,19 @@ class BanUtils(BaseModule):
             else:
                 await invite.delete()
                 await self.utils.respond(ctx, ResponseLevel.success)
+
         else:
             await subscription.delete()
             await self.utils.respond(ctx, ResponseLevel.success)
+
+            foreign_settings = await BanUtilSettings.get(guild_id=target_guild_id)
+            if foreign_settings.foreign_log_channel != None:
+                target_channel = self.bot.get_channel(foreign_settings.foreign_log_channel)
+                if target_channel != None:
+                    await target_channel.send(embed=discord.Embed(
+                        color=discord.Color.red(),
+                        description=f'Kicked by {ctx.guild.name} ({ctx.guild.id})'
+                    ))
     
     @commands.command('bu.foreign')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
@@ -604,23 +695,4 @@ class BanUtils(BaseModule):
             else:
                 module_settings.receive_invite_alerts = bool_value
             await module_settings.save(update_fields=['receive_invite_alerts'])
-            await self.utils.respond(ctx, ResponseLevel.success)
-    
-    @commands.command('bu.bulk')
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def bu_bulk(self, ctx: commands.Context, *ids: int):
-
-        success = 0
-        failure = 0
-        for id in ids:
-            try:
-                await ctx.guild.ban(PseudoId(id=id), reason=f'Massban by {ctx.author.id}')
-            except Exception as e:
-                print(e)
-                failure += 1
-            else:
-                success += 1
-        if failure > 0:
-            await self.utils.respond(ctx, ResponseLevel.general_error, f'Failed banning {failure}/{len(ids)} users')
-        else:
             await self.utils.respond(ctx, ResponseLevel.success)

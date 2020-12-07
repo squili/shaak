@@ -17,11 +17,10 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 '''
 
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
-import asyncio
 import re
 import string
 from dataclasses import dataclass
-from typing      import Any, Callable, Dict, List, Optional, Union, Tuple
+from typing      import Any, Dict, List, Optional, Tuple
 
 import discord
 from discord.errors      import HTTPException
@@ -31,23 +30,22 @@ from tortoise.exceptions import DoesNotExist
 from shaak.base_module import BaseModule
 from shaak.checks      import has_privlidged_role_check
 from shaak.consts      import MatchType, ModuleInfo, watch_setting_map
-from shaak.errors      import InvalidId
 from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
                                get_int_ranges, getrange_s, id2mention,
                                link_to_message, mention2id, pluralize,
-                               resolve_mention, possesivize, chunks, str2bool,
+                               resolve_mention, possesivize, str2bool,
                                DiscardingQueue)
-from shaak.matcher     import pattern_preprocess, text_preprocess, word_matches
-from shaak.settings    import product_settings
-from shaak.utils       import ResponseLevel, Utils
-from shaak.models      import (WordWatchSettings, WordWatchPingGroup, WordWatchPing,
+from shaak.matcher  import pattern_preprocess, text_preprocess, word_matches
+from shaak.models   import (WordWatchSettings, WordWatchPingGroup, WordWatchPing,
+from shaak.settings import product_settings
+from shaak.utils    import ResponseLevel
                                WordWatchWatch, WordWatchIgnore, Guild)
 
 @dataclass
 class WatchCacheEntry:
 
-    id:            int
-    compiled:      Any
+    id:       int
+    compiled: Any
 
     def __hash__(self):
         return self.id

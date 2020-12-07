@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "ALTER TABLE \"banutilinvite\" ADD \"message_id\" BIGINT"
+  ],
+  "downgrade": [
+    "ALTER TABLE \"banutilinvite\" DROP COLUMN \"message_id\""
+  ]
+}

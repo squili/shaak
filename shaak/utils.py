@@ -21,7 +21,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 import asyncio
 import time
 import random
-from typing import List, Optional, Union, Callable, TypeVar, Coroutine
+from typing   import List, Optional, Union, Callable, TypeVar, Coroutine
 from datetime import datetime
 
 import discord
@@ -29,9 +29,10 @@ from discord.ext import commands
 
 from shaak.consts      import ResponseLevel, response_map, color_green, MentionType
 from shaak.models      import GuildSettings, GlobalSettings
-from shaak.helpers     import chunks, platform_info
+from shaak.helpers     import chunks, platform_info, commas, getrange_s
 from shaak.settings    import product_settings
 from shaak.extra_types import GeneralChannel
+from shaak.checks      import has_privlidged_role_check
 
 _T = TypeVar('T')
 
@@ -253,3 +254,45 @@ class Utils(commands.Cog):
                 f'Message roundtrip: {message_roundtrip}ms',
             ])
         ))
+    
+    @commands.command('massban')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def massban(self, ctx: commands.Context, *ids: int):
+
+        await ctx.message.add_reaction('🔄')
+
+        errors = []
+        for index, id in enumerate(ids):
+            try:
+                await ctx.guild.ban(discord.Object(id=id), reason=f'Massban by {ctx.author.id}')
+            except Exception as e:
+                errors.append(index+1)
+        
+        await ctx.message.remove_reaction('🔄', self.bot.user)
+        
+        if len(errors) > 0:
+            await self.respond(ctx, ResponseLevel.general_error, f'Failed banning {commas(getrange_s(errors))}')
+        else:
+            await self.respond(ctx, ResponseLevel.success)
+    
+    @commands.command('massrole')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def massrole(self, ctx: commands.Context, role: commands.RoleConverter(), *members: commands.MemberConverter()):
+
+        await ctx.message.add_reaction('🔄')
+
+        errors = []
+        for index, member in enumerate(members):
+            if role in member.roles:
+                continue
+            try:
+                await member.add_roles(role, reason=f'Massrole by {ctx.author.id}')
+            except Exception as e:
+                errors.append(index+1)
+        
+        await ctx.message.remove_reaction('🔄', self.bot.user)
+
+        if len(errors) > 0:
+            await self.respond(ctx, ResponseLevel.general_error, f'Failed roling {commas(getrange_s(errors))}')
+        else:
+            await self.respond(ctx, ResponseLevel.success)

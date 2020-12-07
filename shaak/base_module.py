@@ -20,9 +20,9 @@ import asyncio
 
 from discord.ext import commands
 
-from shaak.consts import ModuleInfo, ResponseLevel
+from shaak.consts     import ModuleInfo, ResponseLevel
 from shaak.custom_bot import CustomBot
-from shaak.errors import ModuleDisabled
+from shaak.errors     import ModuleDisabled
 
 class BaseModule(commands.Cog):
     
