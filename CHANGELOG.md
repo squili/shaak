@@ -1,3 +1,7 @@
+### 1.2.0rc3
+- Fixed `NameError` during background error logging
+- Made BanUtil invites delete after taking action
+
 ### 1.2.0rc2
 - New migration
 - New docs

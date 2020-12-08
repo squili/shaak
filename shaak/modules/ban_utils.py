@@ -238,7 +238,7 @@ class BanUtils(BaseModule):
             await new_message.add_reaction('🔄')
             await new_message.add_reaction('❌')
         except Exception as e:
-            await self.utils.log_background_error(item.guild, e)
+            await self.utils.log_background_error(guild, e)
     
     @commands.Cog.listener()
     async def on_member_unban(self, guild: discord.Guild, user: Union[discord.Member, discord.User]):
@@ -249,7 +249,7 @@ class BanUtils(BaseModule):
             for event in await BanUtilCrossbanEvent.filter(guild_id=guild.id, event__target_id=user.id).all():
                 await self.update_event(event, self.update_crossban_message, False, '🔨', '🔄')
         except Exception as e:
-            await self.utils.log_background_error(item.guild, e)
+            await self.utils.log_background_error(guild, e)
     
     # we have to use the raw reaction event because rapptz hates me
     @commands.Cog.listener()
@@ -317,7 +317,7 @@ class BanUtils(BaseModule):
                     await BanUtilSettings.filter(guild_id=invite.to_guild.id).update(receive_invite_alerts=False)
 
                 await invite.delete()
-                await message.clear_reactions()
+                await message.delete()
 
             else:
                 # bans
@@ -431,7 +431,7 @@ class BanUtils(BaseModule):
             
                 await message.remove_reaction(payload.emoji, user)
         except Exception as e:
-            await self.utils.log_background_error(item.guild, e)
+            await self.utils.log_background_error(guild, e)
         
     @commands.command('bu.invite')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
