@@ -1,3 +1,9 @@
+### 1.2.0rc5
+- Stripped out legacy crossban code
+- Crossbans should be marginally faster, now
+- Updated invite message handling
+- Fixed traceback code
+
 ### 1.2.0rc4
 - Fixed `AttributeError` during ban forwarding
 - Added traceback to background error logging

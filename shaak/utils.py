@@ -19,7 +19,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 # pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
 import asyncio
+import io
 import time
+import traceback
 import random
 import sys
 from typing   import List, Optional, Union, Callable, TypeVar, Coroutine
@@ -202,9 +204,17 @@ class Utils(commands.Cog):
         if guild_settings.error_channel == None:
             return
         log_channel = self.bot.get_channel(guild_settings.error_channel)
-        info = sys.exc_info(error)
+        # you can call this janky. you can call this a hack. you can call
+        # this whatever you'd like, because i wholeheartedly agree with you
+        try:
+            raise error
+        except Exception:
+            info = sys.exc_info()
+        buff = io.StringIO()
+        traceback.print_exception(info[0], info[1], info[2], file=buff)
+        buff.seek(0)
         embed = discord.Embed(
-            description=f'{info[2]}\n{info[0]}: {info[1]}'
+            description=buff.read()
         )
         embed.set_footer(text='Error report')
         await log_channel.send(embed=embed)
