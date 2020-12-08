@@ -59,9 +59,10 @@ response_map = {
 
 # setting_name: (serialize, deserialize)
 setting_structure = {
-    'prefix':    (str, lambda x: f'`{x}`'),
-    'verbosity': (str2bool, bool2str),
-    'auth_role': (mention2id_validate(MentionType.role), id2mention_validate(MentionType.role))
+    'prefix':                                             (str, lambda x: f'`{x}`'),
+    'verbosity':                                     (str2bool, bool2str),
+    'auth_role':        (mention2id_validate(MentionType.role), id2mention_validate(MentionType.role)),
+    'error_channel': (mention2id_validate(MentionType.channel), id2mention_validate(MentionType.channel))
 }
 
 class MatchType(Enum):

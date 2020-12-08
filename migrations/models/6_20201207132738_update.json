@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "ALTER TABLE \"guildsettings\" ADD \"error_channel\" BIGINT"
+  ],
+  "downgrade": [
+    "ALTER TABLE \"guildsettings\" DROP COLUMN \"error_channel\""
+  ]
+}

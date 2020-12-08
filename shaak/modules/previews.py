@@ -97,18 +97,21 @@ class Previews(BaseModule):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         
-        matches = message_link_regex.findall(message.content)
-        if matches:
-            if not await PreviewFilter.filter(channel_id=message.channel.id).exists():
-                return
+        try:
+            matches = message_link_regex.findall(message.content)
+            if matches:
+                if not await PreviewFilter.filter(channel_id=message.channel.id).exists():
+                    return
 
-            module_settings: PreviewSettings = await PreviewSettings.get(guild_id=message.guild.id)
-            log_channel = None
-            if module_settings.log_channel:
-                log_channel = self.bot.get_channel(module_settings.log_channel)
-            
-            for match in matches:
-                await self.send_message_preview(log_channel or message.channel, match, message.author)
+                module_settings: PreviewSettings = await PreviewSettings.get(guild_id=message.guild.id)
+                log_channel = None
+                if module_settings.log_channel:
+                    log_channel = self.bot.get_channel(module_settings.log_channel)
+                
+                for match in matches:
+                    await self.send_message_preview(log_channel or message.channel, match, message.author)
+        except Exception as e:
+            await self.utils.log_background_error(item.guild, e)
     
     @commands.command('pv.view')
     async def pv_view(self, ctx: commands.Context, link: str):

@@ -194,6 +194,18 @@ class Utils(commands.Cog):
                 return MentionType.channel
         else:
             return MentionType.user
+    
+    async def log_background_error(self, guild: discord.Guild, error: Exception):
+
+        guild_settings = await GuildSettings.get(guild_id=guild.id)
+        if guild_settings.error_channel == None:
+            return
+        log_channel = self.bot.get_channel(guild_settings.error_channel)
+        embed = discord.Embed(
+            description=str(error)
+        )
+        embed.set_footer(text='Error report')
+        await log_channel.send(embed=embed)
 
     @commands.command('about')
     async def about(self, ctx: commands.Context):
@@ -256,7 +268,7 @@ class Utils(commands.Cog):
         ))
     
     @commands.command('massban')
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check(), commands.guild_only())
     async def massban(self, ctx: commands.Context, *ids: int):
 
         await ctx.message.add_reaction('🔄')
@@ -276,7 +288,7 @@ class Utils(commands.Cog):
             await self.respond(ctx, ResponseLevel.success)
     
     @commands.command('massrole')
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check(), commands.guild_only())
     async def massrole(self, ctx: commands.Context, role: commands.RoleConverter(), *members: commands.MemberConverter()):
 
         await ctx.message.add_reaction('🔄')

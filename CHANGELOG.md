@@ -1,3 +1,9 @@
+### 1.2.0rc2
+- New migration
+- New docs
+- Restricted `massban` and `massrole` from executing in dms
+- Added channel for logging background errors
+
 ### 1.2.0rc1
 - Fixed an issue causing watch entries with an assigned ping group to not ping correctly
 

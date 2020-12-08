@@ -32,10 +32,11 @@ class Guild(Model):
     delete_at = fields.DatetimeField (null=True)
 
 class GuildSettings(Model):
-    guild     = fields.ForeignKeyField ('models.Guild', related_name='guild_settings')
-    prefix    = fields.TextField       (null=True)
-    verbosity = fields.BooleanField    (null=True)
-    auth_role = fields.BigIntField     (null=True)
+    guild         = fields.ForeignKeyField ('models.Guild', related_name='guild_settings')
+    prefix        = fields.TextField       (null=True)
+    verbosity     = fields.BooleanField    (null=True)
+    auth_role     = fields.BigIntField     (null=True)
+    error_channel = fields.BigIntField     (null=True)
 
 class WordWatchSettings(Model, ModuleSettingsMixin):
     guild       = fields.ForeignKeyField ('models.Guild', related_name='word_watch_settings')

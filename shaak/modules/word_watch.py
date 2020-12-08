@@ -277,8 +277,12 @@ class WordWatch(BaseModule):
                     await log_channel.send(content=content, embed=fallback_embed)
     
     async def scan_loop(self):
-        await self.scan_message(await self.scan_queue.get())
-        self.bot.loop.create_task(self.scan_loop())
+        item = await self.scan_queue.get()
+        try:
+            await self.scan_message(item)
+            self.bot.loop.create_task(self.scan_loop())
+        except Exception as e:
+            await self.utils.log_background_error(item.guild, e)
 
     async def after_invoke_hook(self, ctx: commands.Context):
 
