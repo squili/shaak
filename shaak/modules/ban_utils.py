@@ -264,6 +264,7 @@ class BanUtils(BaseModule):
             guild = self.bot.get_guild(payload.guild_id)
             channel = guild.get_channel(payload.channel_id)
             message = await channel.fetch_message(payload.message_id)
+            user = await guild.fetch_member(payload.user_id)
 
             if message.author != self.bot.user or len(message.embeds) != 1:
                 return
@@ -336,8 +337,6 @@ class BanUtils(BaseModule):
                 else:
                     is_ban_event = True
 
-                user = self.bot.get_user(payload.user_id)
-                
                 privilidged = await check_privildged(guild, guild.get_member(user.id))
                 if privilidged:
                     ban_perms = True

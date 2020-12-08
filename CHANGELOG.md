@@ -1,3 +1,7 @@
+### 1.2.0rc4
+- Fixed `AttributeError` during ban forwarding
+- Added traceback to background error logging
+
 ### 1.2.0rc3
 - Fixed `NameError` during background error logging
 - Made BanUtil invites delete after taking action

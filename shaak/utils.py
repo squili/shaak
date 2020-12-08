@@ -21,6 +21,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 import asyncio
 import time
 import random
+import sys
 from typing   import List, Optional, Union, Callable, TypeVar, Coroutine
 from datetime import datetime
 
@@ -201,8 +202,9 @@ class Utils(commands.Cog):
         if guild_settings.error_channel == None:
             return
         log_channel = self.bot.get_channel(guild_settings.error_channel)
+        info = sys.exc_info(error)
         embed = discord.Embed(
-            description=str(error)
+            description=f'{info[2]}\n{info[0]}: {info[1]}'
         )
         embed.set_footer(text='Error report')
         await log_channel.send(embed=embed)
