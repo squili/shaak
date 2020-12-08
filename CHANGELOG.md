@@ -1,6 +1,6 @@
 ### 1.2.0rc5
 - Stripped out legacy crossban code
-- Crossbans should be marginally faster, now
+- Crossbans should be marginally faster
 - Updated invite message handling
 - Fixed traceback code
 
