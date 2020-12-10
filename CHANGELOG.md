@@ -1,5 +1,6 @@
 ### 1.2.0
 - Fixed race condition with message deletion and reaction additions causing errors to be thrown
+- Cleaned up debug code in WordWatch
 
 ### 1.2.0rc5
 - Stripped out legacy crossban code

@@ -136,28 +136,17 @@ class WordWatch(BaseModule):
         if await self.is_id_ignored(message.guild.id, message.author.id):
             return
         
-        # lots of debug code here. hopefully i can get an error to throw with this better info
-        # 12/5 update: still nothing
-        dbg = 'a'
         check_member = message.webhook_id == None
         if isinstance(message.author, discord.User):
-            dbg += 'b'
             try:
                 message.author = await message.guild.fetch_member(message.author.id)
-                dbg += 'd'
             except discord.HTTPException:
-                dbg += 'c'
                 check_member = False
 
         if check_member:
-            dbg += f' {message.author.name} {message.author.id}'
-            try:
-                for role in message.author.roles:
-                    if await self.is_id_ignored(message.guild.id, role.id):
-                        return
-            except Exception as e:
-                print(dbg)
-                raise e
+            for role in message.author.roles:
+                if await self.is_id_ignored(message.guild.id, role.id):
+                    return
         
         delete_message = False
         matches = set()
