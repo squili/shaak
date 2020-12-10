@@ -1,3 +1,6 @@
+### 1.2.0
+- Fixed race condition with message deletion and reaction additions causing errors to be thrown
+
 ### 1.2.0rc5
 - Stripped out legacy crossban code
 - Crossbans should be marginally faster

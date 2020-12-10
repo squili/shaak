@@ -271,7 +271,13 @@ class BanUtils(BaseModule):
 
             guild = self.bot.get_guild(payload.guild_id)
             channel = guild.get_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
+            try:
+                message = await channel.fetch_message(payload.message_id)
+            except discord.HTTPException as e:
+                if e.code == 10008:
+                    return
+                else:
+                    raise e
             user = await guild.fetch_member(payload.user_id)
 
             if message.author != self.bot.user or len(message.embeds) != 1:
