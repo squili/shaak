@@ -301,7 +301,7 @@ class Utils(commands.Cog):
     
     @commands.command('massunban')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check(), commands.guild_only())
-    async def massban(self, ctx: commands.Context, *ids: int):
+    async def massunban(self, ctx: commands.Context, *ids: int):
 
         await ctx.message.add_reaction('🔄')
 

@@ -1,3 +1,6 @@
+### 1.2.2
+- Fix bad function naming causing massban to not trigger properly
+
 ### 1.2.1
 - New docs
 - Added massunban command
