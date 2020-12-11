@@ -1,3 +1,7 @@
+### 1.2.1
+- New docs
+- Added massunban command
+
 ### 1.2.0
 - Fixed race condition with message deletion and reaction additions causing errors to be thrown
 - Cleaned up debug code in WordWatch

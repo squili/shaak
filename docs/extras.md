@@ -9,5 +9,8 @@
 `massban (user_ids)...`
 :   Bans all listed user ids
 
+`massunban (user_ids)...`
+:   Bans all listed user ids
+
 `massrole (role) (users)...`
 :   Adds role to all listed users
