@@ -21,6 +21,8 @@ import json
 from pathlib import Path
 
 from tortoise import Tortoise
+from uvloop import install
+install() # massive
 
 from shaak.models import GlobalSettings
 
