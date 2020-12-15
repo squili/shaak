@@ -209,4 +209,5 @@ class DiscardingQueue:
     async def put(self, item):
         while self._queue.full():
             self._queue.get_nowait()
+            print('WARN queue discarding messages')
         return await self._queue.put(item)
