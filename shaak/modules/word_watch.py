@@ -35,7 +35,7 @@ from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
                                link_to_message, mention2id, pluralize,
                                resolve_mention, possesivize, str2bool,
                                DiscardingQueue)
-from shaak.matcher  import pattern_preprocess, text_preprocess, word_matches
+from shaak.matcher  import pattern_preprocess, text_preprocess, word_matches, find_all_contains
 from shaak.models   import (WordWatchSettings, WordWatchPingGroup, WordWatchPing,
                             WordWatchWatch, WordWatchIgnore, Guild)
 from shaak.settings import product_settings
@@ -79,6 +79,8 @@ class WordWatch(BaseModule):
             cache_entry.compiled = re.compile(watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
         elif watch.match_type == MatchType.word.value:
             cache_entry.compiled = pattern_preprocess(watch.pattern)
+        elif watch.match_type == MatchType.contains.value:
+            pass
         else:
             print(f'ERR bad watch cache entry with id {watch.id}: {watch.match_type} is not a valid match type. this should never happen!')
             return None
@@ -151,9 +153,13 @@ class WordWatch(BaseModule):
         delete_message = False
         matches = set()
         processed_text = None
+        text_lower = None
         for entry in self.watch_cache[message.guild.id]:
 
-            watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
+            try:
+                watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
+            except DoesNotExist:
+                continue
 
             if watch.match_type == MatchType.regex.value:
                 found = list(entry.compiled.finditer(message.content))
@@ -174,6 +180,17 @@ class WordWatch(BaseModule):
                         matches.add((
                             watch, match[0], match[1]
                         ))
+            
+            elif watch.match_type == MatchType.contains.value:
+                if watch.ignore_case and text_lower == None:
+                    text_lower = message.content.lower()
+                found = list(find_all_contains(text_lower if watch.ignore_case else message.content, watch.pattern))
+                if found:
+                    delete_message = delete_message or watch.auto_delete
+                    for match in found:
+                        matches.add((
+                            watch, match[0], match[1]
+                        ))
 
         if delete_message:
             try:
@@ -182,7 +199,10 @@ class WordWatch(BaseModule):
                 pass # the message may be deleted before we get to it; this shouldn't cause us to not log the message
 
         if matches:
-            module_settings: WordWatchSettings = await WordWatchSettings.get(guild_id=message.guild.id)
+            try:
+                module_settings: WordWatchSettings = await WordWatchSettings.get(guild_id=message.guild.id)
+            except DoesNotExist:
+                return
             if module_settings.log_channel == None:
                 return
                 

@@ -20,7 +20,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 # in a seperate file to help with code organization
 
 import string
-from typing import Tuple, List
+from typing import Tuple, List, Iterator
 
 word_markers = frozenset(string.punctuation + string.whitespace)
 format_markers = frozenset('*_|~')
@@ -51,6 +51,8 @@ def word_matches(processed_text: ProcessedTextType, processed_pattern: Processed
                 start = along
             index += 1
             if index == pattern_len:
+                if along < text_len and text[along+1] == 's':
+                    along += 1
                 if (start == 0 or text[start-1] in word_markers) and (along+1 == text_len or text[along+1] in word_markers):
                     found.add((start, along+1))
                 index = 0
@@ -62,3 +64,12 @@ def word_matches(processed_text: ProcessedTextType, processed_pattern: Processed
         along += 1
     
     return found
+
+def find_all_contains(text: str, sub: str) -> Iterator[Tuple[int, int]]:
+    start = 0
+    sub_l = len(sub)
+    while True:
+        start = text.find(sub, start)
+        if start == -1: return
+        yield (start, start + sub_l)
+        start += len(sub)

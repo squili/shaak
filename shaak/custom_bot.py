@@ -19,7 +19,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 import asyncio
 
 import discord
-from discord.ext import commands
+from discord.ext         import commands
+from tortoise.exceptions import DoesNotExist
 
 from shaak.errors   import ModuleDisabled, NotAllowed, InvalidId
 from shaak.consts   import ResponseLevel
@@ -71,11 +72,14 @@ class CustomBot(commands.Bot):
 
 async def get_command_prefix(bot: CustomBot, message: discord.Message) -> str:
     
-    await bot.manager_ready.wait()
     if message.guild != None:
-        guild_settings: GuildSettings = await GuildSettings.get(guild_id=message.guild.id)
-        if guild_settings.prefix:
-            return guild_settings.prefix
+        try:
+            guild_settings: GuildSettings = await GuildSettings.get(guild_id=message.guild.id)
+        except DoesNotExist:
+            pass
+        else:
+            if guild_settings.prefix:
+                return guild_settings.prefix
     global_settings = await GlobalSettings.get(id=0)
     return global_settings.default_prefix
 

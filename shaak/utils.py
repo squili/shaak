@@ -158,10 +158,11 @@ class Utils(commands.Cog):
                 else:
                     embed = await custom_embed(ctx, pages[page_index], page_index, len(pages))
                 await new_message.edit(embed=embed)
-                await reaction.remove(user)
+                if not isinstance(ctx.channel, discord.DMChannel):
+                    await reaction.remove(user)
         
-        for emoji in ['⏪', '◀', '▶', '⏩']:
-            await new_message.clear_reaction(emoji)
+        if not isinstance(ctx.channel, discord.DMChannel):
+            await new_message.clear_reactions()
     
     async def _aggressive_resolve(self, some_id: int, calm_method: Callable, aggressive_method: Coroutine, return_type: _T) -> Optional[_T]:
 

@@ -1,3 +1,11 @@
+### 1.3.0
+- Added contains match type
+- Added optional `s` to the end of word match
+- Fixed prefix race condition
+- Fixed match race condition
+- Fixed forbidden reaction removal in list utility
+- Fixed preview permissions check
+
 ### 1.2.2
 - Fix bad function naming causing massban to not trigger properly
 
