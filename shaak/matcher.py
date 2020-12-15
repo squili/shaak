@@ -51,8 +51,8 @@ def word_matches(processed_text: ProcessedTextType, processed_pattern: Processed
                 start = along
             index += 1
             if index == pattern_len:
-                if along < text_len and text[along+1] == 's':
-                    along += 1
+                # if along < text_len and text[along+1] == 's':
+                    # along += 1
                 if (start == 0 or text[start-1] in word_markers) and (along+1 == text_len or text[along+1] in word_markers):
                     found.add((start, along+1))
                 index = 0

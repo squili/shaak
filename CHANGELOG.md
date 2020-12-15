@@ -1,4 +1,9 @@
+### 1.3.1
+- Rolled back optional `s` matching
+
 ### 1.3.0
+- Broke message scanning
+- New docs
 - Added contains match type
 - Added optional `s` to the end of word match
 - Fixed prefix race condition
