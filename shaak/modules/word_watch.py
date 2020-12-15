@@ -28,7 +28,7 @@ from discord.ext         import commands
 from tortoise.exceptions import DoesNotExist
 
 from shaak.base_module import BaseModule
-from shaak.checks      import has_privlidged_role_check
+from shaak.checks      import has_privlidged_role_check, is_owner_check
 from shaak.consts      import MatchType, ModuleInfo, watch_setting_map
 from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
                                get_int_ranges, getrange_s, id2mention,
@@ -790,3 +790,14 @@ class WordWatch(BaseModule):
             await self.utils.respond(ctx, ResponseLevel.success, 'No pings found')
         else:
             await self.utils.list_items(ctx, entries)
+
+    @commands.command(name='debug.list_cache')
+    @is_owner_check()
+    async def debug_list_cache(self, ctx: commands.Context, guild_id: int = None):
+        if guild_id == None:
+            await self.utils.list_items(ctx, [str(i) for i in self.watch_cache])
+        else:
+            if guild_id in self.watch_cache:
+                await self.utils.list_items(ctx, [str(i) for i in self.watch_cache[guild_id]])
+            else:
+                await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not found')

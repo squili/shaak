@@ -18,8 +18,9 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from discord.ext import commands
 
-from shaak.errors  import NotAllowed
-from shaak.helpers import check_privildged
+from shaak.errors   import NotAllowed
+from shaak.helpers  import check_privildged
+from shaak.settings import app_settings
 
 def has_privlidged_role_check():
 
@@ -32,5 +33,16 @@ def has_privlidged_role_check():
             return True
         elif privildged == False:
             raise NotAllowed()
+    
+    return commands.check(predicate)
+
+def is_owner_check():
+
+    async def predicate(ctx: commands.Context):
+
+        if ctx.author.id == app_settings.owner_id:
+            return True
+        else:
+            raise commands.CheckFailure('👀')
     
     return commands.check(predicate)
