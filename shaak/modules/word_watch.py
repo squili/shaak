@@ -17,6 +17,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 '''
 
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
+import time
 import re
 import string
 from dataclasses import dataclass
@@ -125,170 +126,176 @@ class WordWatch(BaseModule):
 
     async def scan_message(self, message: discord.Message):
 
-        await self.initialized.wait()
-        
-        if message.guild is None:
-            return
-        
-        if message.author.bot:
-            return
-        
-        if await self.is_id_ignored(message.guild.id, message.channel.id):
-            return
+        start_time = time.time()
+        try:
 
-        if message.channel.category_id and await self.is_id_ignored(message.guild.id, message.channel.category_id):
-            return
-        
-        if await self.is_id_ignored(message.guild.id, message.author.id):
-            return
-        
-        check_member = message.webhook_id == None
-        if isinstance(message.author, discord.User):
-            try:
-                message.author = await message.guild.fetch_member(message.author.id)
-            except discord.HTTPException:
-                check_member = False
-
-        if check_member:
-            for role in message.author.roles:
-                if await self.is_id_ignored(message.guild.id, role.id):
-                    return
-        
-        delete_message = False
-        matches = set()
-        processed_text = None
-        text_lower = None
-        for entry in self.watch_cache[message.guild.id]:
-
-            try:
-                watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
-            except DoesNotExist:
-                continue
-
-            if watch.match_type == MatchType.regex.value:
-                found = list(entry.compiled.finditer(message.content))
-                if found:
-                    delete_message = delete_message or watch.auto_delete
-                    for match in found:
-                        matches.add((
-                            watch, match.start(0), match.end(0)
-                        ))
-
-            elif watch.match_type == MatchType.word.value:
-                if processed_text == None:
-                    processed_text = text_preprocess(message.content)
-                found = word_matches(processed_text, entry.compiled)
-                if found:
-                    delete_message = delete_message or watch.auto_delete
-                    for match in found:
-                        matches.add((
-                            watch, match[0], match[1]
-                        ))
+            await self.initialized.wait()
             
-            elif watch.match_type == MatchType.contains.value:
-                if watch.ignore_case and text_lower == None:
-                    text_lower = message.content.lower()
-                found = list(find_all_contains(text_lower if watch.ignore_case else message.content, watch.pattern))
-                if found:
-                    delete_message = delete_message or watch.auto_delete
-                    for match in found:
-                        matches.add((
-                            watch, match[0], match[1]
-                        ))
-
-        if delete_message:
-            try:
-                await message.delete()
-            except discord.NotFound:
-                pass # the message may be deleted before we get to it; this shouldn't cause us to not log the message
-
-        if matches:
-            try:
-                module_settings: WordWatchSettings = await WordWatchSettings.get(guild_id=message.guild.id)
-            except DoesNotExist:
+            if message.guild is None:
                 return
-            if module_settings.log_channel == None:
+            
+            if message.author.bot:
                 return
+            
+            if await self.is_id_ignored(message.guild.id, message.channel.id):
+                return
+
+            if message.channel.category_id and await self.is_id_ignored(message.guild.id, message.channel.category_id):
+                return
+            
+            if await self.is_id_ignored(message.guild.id, message.author.id):
+                return
+            
+            check_member = message.webhook_id == None
+            if isinstance(message.author, discord.User):
+                try:
+                    message.author = await message.guild.fetch_member(message.author.id)
+                except discord.HTTPException:
+                    check_member = False
+
+            if check_member:
+                for role in message.author.roles:
+                    if await self.is_id_ignored(message.guild.id, role.id):
+                        return
+            
+            delete_message = False
+            matches = set()
+            processed_text = None
+            text_lower = None
+            for entry in self.watch_cache[message.guild.id]:
+
+                try:
+                    watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
+                except DoesNotExist:
+                    continue
+
+                if watch.match_type == MatchType.regex.value:
+                    found = list(entry.compiled.finditer(message.content))
+                    if found:
+                        delete_message = delete_message or watch.auto_delete
+                        for match in found:
+                            matches.add((
+                                watch, match.start(0), match.end(0)
+                            ))
+
+                elif watch.match_type == MatchType.word.value:
+                    if processed_text == None:
+                        processed_text = text_preprocess(message.content)
+                    found = word_matches(processed_text, entry.compiled)
+                    if found:
+                        delete_message = delete_message or watch.auto_delete
+                        for match in found:
+                            matches.add((
+                                watch, match[0], match[1]
+                            ))
                 
-            log_channel = self.bot.get_channel(module_settings.log_channel)
-            if log_channel == None:
-                return
-            
-            pings = set()
-            groups = set()
-            for match in matches:
-                if match[0].group != None and match[0].group.id not in groups:
-                    groups.add(match[0].group.id)
-                    await match[0].group.fetch_related('pings')
-                    for ping in match[0].group.pings:
-                        pings.add(id2mention(ping.target_id, ping.ping_type))
-            
-            deduped_patterns = set([o[0].pattern for o in matches])
-            pattern_list = commas([str(i) for i in deduped_patterns])
-            pattern_list_code = commas([f"`{i}`" for i in deduped_patterns])
+                elif watch.match_type == MatchType.contains.value:
+                    if watch.ignore_case and text_lower == None:
+                        text_lower = message.content.lower()
+                    found = list(find_all_contains(text_lower if watch.ignore_case else message.content, watch.pattern))
+                    if found:
+                        delete_message = delete_message or watch.auto_delete
+                        for match in found:
+                            matches.add((
+                                watch, match[0], match[1]
+                            ))
 
-            ranges = get_int_ranges(set(
-                (index                       for range_ in
-                (range(match[1], match[2]+1) for match  in matches)
-                                             for index  in range_)
-            )) # p y t h o n i c
+            if delete_message:
+                try:
+                    await message.delete()
+                except discord.NotFound:
+                    pass # the message may be deleted before we get to it; this shouldn't cause us to not log the message
 
-            message_embed = discord.Embed(
-                color=discord.Color(0xd22513),
-                description='\n'.join([
-                    between_segments(message.content, ranges).replace('](', ']\\('),
-                    f'[Jump to message]({link_to_message(message)})'
-                ]),
-                timestamp=message.created_at
-            )
-            message_embed.set_author(
-                name=f'{message.author.name}#{message.author.discriminator} triggered {pattern_list} in #{message.channel.name}',
-                icon_url=message.author.avatar_url
-            )
-            message_embed.set_footer(text=f'User ID: {message.author.id}', icon_url=message.guild.icon_url)
-            message_embed.add_field(name='User', value=id2mention(message.author.id, MentionType.user), inline=True)
-            message_embed.add_field(name='Channel', value=id2mention(message.channel.id, MentionType.channel), inline=True)
-            message_embed.add_field(name='Deleted', value=bool2str(delete_message, 'Yes', 'No'), inline=True)
-            message_embed.add_field(name='When', value=message.created_at.strftime("%d/%m/%y \u200B \u200B %I:%M:%S %p"), inline=True)
-            message_embed.add_field(name='Pattern' + pluralize("", "s", len(pattern_list_code)),
-                                    value=pattern_list_code, inline=False)
+            if matches:
+                try:
+                    module_settings: WordWatchSettings = await WordWatchSettings.get(guild_id=message.guild.id)
+                except DoesNotExist:
+                    return
+                if module_settings.log_channel == None:
+                    return
+                    
+                log_channel = self.bot.get_channel(module_settings.log_channel)
+                if log_channel == None:
+                    return
+                
+                pings = set()
+                groups = set()
+                for match in matches:
+                    if match[0].group != None and match[0].group.id not in groups:
+                        groups.add(match[0].group.id)
+                        await match[0].group.fetch_related('pings')
+                        for ping in match[0].group.pings:
+                            pings.add(id2mention(ping.target_id, ping.ping_type))
+                
+                deduped_patterns = set([o[0].pattern for o in matches])
+                pattern_list = commas([str(i) for i in deduped_patterns])
+                pattern_list_code = commas([f"`{i}`" for i in deduped_patterns])
 
-            content = module_settings.header
-            if content:
-                template = string.Template(content)
-                content = template.safe_substitute(
-                    patterns=pattern_list_code,
-                    channel=message.channel.name,
-                    channel_reference=id2mention(message.channel.id, MentionType.channel),
-                    user=f'{message.author.name}#{message.author.discriminator}',
-                    user_ping=id2mention(message.author.id, MentionType.user),
-                    user_id=message.author.id
+                ranges = get_int_ranges(set(
+                    (index                       for range_ in
+                    (range(match[1], match[2]+1) for match  in matches)
+                                                for index  in range_)
+                )) # p y t h o n i c
+
+                message_embed = discord.Embed(
+                    color=discord.Color(0xd22513),
+                    description='\n'.join([
+                        between_segments(message.content, ranges).replace('](', ']\\('),
+                        f'[Jump to message]({link_to_message(message)})'
+                    ]),
+                    timestamp=message.created_at
                 )
-            else:
-                content = ''
-            if pings:
-                if content:
-                    content += ' '
-                content += ''.join(pings)
-                if len(content) > 2000:
-                    content = content[len(content)-2000:]
+                message_embed.set_author(
+                    name=f'{message.author.name}#{message.author.discriminator} triggered {pattern_list} in #{message.channel.name}',
+                    icon_url=message.author.avatar_url
+                )
+                message_embed.set_footer(text=f'User ID: {message.author.id}', icon_url=message.guild.icon_url)
+                message_embed.add_field(name='User', value=id2mention(message.author.id, MentionType.user), inline=True)
+                message_embed.add_field(name='Channel', value=id2mention(message.channel.id, MentionType.channel), inline=True)
+                message_embed.add_field(name='Deleted', value=bool2str(delete_message, 'Yes', 'No'), inline=True)
+                message_embed.add_field(name='When', value=message.created_at.strftime("%d/%m/%y \u200B \u200B %I:%M:%S %p"), inline=True)
+                message_embed.add_field(name='Pattern' + pluralize("", "s", len(pattern_list_code)),
+                                        value=pattern_list_code, inline=False)
 
-            try:
-                await log_channel.send(content=content, embed=message_embed)
-            except HTTPException as e:
-                if e.code == 50035: # embed too long
-                    # fallback
-                    fallback_embed = discord.Embed(
-                        color=discord.Color(0xd22513),
-                        description=f'[Jump to message]({link_to_message(message)})'
+                content = module_settings.header
+                if content:
+                    template = string.Template(content)
+                    content = template.safe_substitute(
+                        patterns=pattern_list_code,
+                        channel=message.channel.name,
+                        channel_reference=id2mention(message.channel.id, MentionType.channel),
+                        user=f'{message.author.name}#{message.author.discriminator}',
+                        user_ping=id2mention(message.author.id, MentionType.user),
+                        user_id=message.author.id
                     )
-                    fallback_embed.set_author(
-                        name=f'{message.author.name}#{message.author.discriminator} triggered Word Watch in #{message.channel.name}',
-                        icon_url=message.author.avatar_url
-                    )
-                    fallback_embed.set_footer(text=f'Fallback embed • Ping {product_settings.author_name}!')
-                    await log_channel.send(content=content, embed=fallback_embed)
-    
+                else:
+                    content = ''
+                if pings:
+                    if content:
+                        content += ' '
+                    content += ''.join(pings)
+                    if len(content) > 2000:
+                        content = content[len(content)-2000:]
+
+                try:
+                    await log_channel.send(content=content, embed=message_embed)
+                except HTTPException as e:
+                    if e.code == 50035: # embed too long
+                        # fallback
+                        fallback_embed = discord.Embed(
+                            color=discord.Color(0xd22513),
+                            description=f'[Jump to message]({link_to_message(message)})'
+                        )
+                        fallback_embed.set_author(
+                            name=f'{message.author.name}#{message.author.discriminator} triggered Word Watch in #{message.channel.name}',
+                            icon_url=message.author.avatar_url
+                        )
+                        fallback_embed.set_footer(text=f'Fallback embed • Ping {product_settings.author_name}!')
+                        await log_channel.send(content=content, embed=fallback_embed)
+        finally:
+            end_time = time.time()
+            print(f'scan_message time: {end_time-start_time}')
+            
     async def scan_loop(self):
 
         while True:
