@@ -18,7 +18,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
 import time
-import re
 import string
 from dataclasses import dataclass
 from typing      import Any, Dict, List, Optional, Tuple
@@ -76,9 +75,7 @@ class WordWatch(BaseModule):
             compiled=None
         )
 
-        if watch.match_type == MatchType.regex.value:
-            cache_entry.compiled = re.compile(watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
-        elif watch.match_type == MatchType.word.value:
+        if watch.match_type == MatchType.word.value:
             cache_entry.compiled = pattern_preprocess(watch.pattern)
         elif watch.match_type == MatchType.contains.value:
             pass
