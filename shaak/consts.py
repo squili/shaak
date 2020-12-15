@@ -20,9 +20,9 @@ from dataclasses import dataclass
 from datetime    import timedelta
 from enum        import Enum
 
-import ormar
 import discord
-from discord.ext import commands
+from discord.ext     import commands
+from tortoise.models import Model
 
 from shaak.helpers import (str2bool, bool2str, mention2id_validate, MentionType,
                            id2mention_validate, ensurebool, pass_value)
@@ -39,7 +39,7 @@ class ResponseLevel(Enum):
 @dataclass
 class ModuleInfo:
     name:     str
-    settings: ormar.Model
+    settings: Model
 
 @dataclass
 class TaskInfo:

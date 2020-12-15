@@ -96,9 +96,13 @@ class WordWatch(BaseModule):
         for watch in await WordWatchWatch.all().prefetch_related('guild', 'group'):
             await self.add_to_cache(watch)
 
-        self.bot.loop.create_task(self.scan_loop())
+        self.scan_task = self.bot.loop.create_task(self.scan_loop())
 
         await super().initialize()
+    
+    async def uninitialize(self):
+        await self.scan_queue.put(None)
+        await self.scan_task
     
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
@@ -286,12 +290,24 @@ class WordWatch(BaseModule):
                     await log_channel.send(content=content, embed=fallback_embed)
     
     async def scan_loop(self):
-        item = await self.scan_queue.get()
-        try:
-            await self.scan_message(item)
-        except Exception as e:
-            await self.utils.log_background_error(item.guild, e)
-        self.bot.loop.create_task(self.scan_loop())
+
+        while True:
+            item = await self.scan_queue.get()
+            if item == None:
+                return
+            try:
+                await self.scan_message(item)
+            except Exception as e:
+                await self.utils.log_background_error(item.guild, e)
+    
+    async def close(self):
+
+        await self.scan_queue.put(None)
+        await self.scan_task
+
+    def cog_unload():
+
+        self.bot.loop.run_until_complete(self.close())
 
     async def after_invoke_hook(self, ctx: commands.Context):
 
