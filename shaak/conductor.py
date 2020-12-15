@@ -54,24 +54,21 @@ class Conductor(commands.Cog):
         await asyncio.sleep(wait_until - time.time())
         self.loop.create_task(self.task_callback(task))
     
-    async def main(self):
+    async def process_new_tasks(self):
         print('Conductor started')
-        while True:
-            while len(self.new_tasks) > 0:
-                task = self.new_tasks.pop()
-                await task.initialize()
-                self.loop.create_task(
-                    self.task_callback(
-                        TaskStore(
-                            name=task.meta.name,
-                            wait=task.meta.wait_time,
-                            exec=task.run
-                        )
+        for task in self.new_tasks:
+            await task.initialize()
+            self.loop.create_task(
+                self.task_callback(
+                    TaskStore(
+                        name=task.meta.name,
+                        wait=task.meta.wait_time,
+                        exec=task.run
                     )
                 )
-            await asyncio.sleep(60.0)
+            )
     
     @commands.Cog.listener()
     async def on_ready(self):
         await self.bot.manager_ready.wait()
-        await self.main()
+        await self.process_new_tasks()
