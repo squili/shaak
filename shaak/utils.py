@@ -221,7 +221,7 @@ class Utils(commands.Cog):
         )
         embed.set_footer(text='Error report')
         await log_channel.send(embed=embed)
-            print(f'log_background_error({guild}, {error}) sent')
+        print(f'log_background_error({guild}, {error}) sent')
 
     @commands.command('about')
     async def about(self, ctx: commands.Context):
