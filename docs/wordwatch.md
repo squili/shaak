@@ -6,7 +6,7 @@ Each watch has settings dictating how the bot search messages and the action it 
 
 | Name  | Type       | Default  | Description
 | :-    | :-         | :-       | :-
-| type  | String     | Required | Specifies what type of matching algorithm to use. The available options are `word` and `regex`.
+| type  | String     | Required | Specifies what type of matching algorithm to use. The available options are `word`, `regex`, and `contains`.
 | del   | Boolean    | No       | Whether to delete any message that the bot matches
 | cased | Boolean    | No       | Whether to use case-sensitive matching. Not supported for the `word` type
 | ping  | Ping Group | Null     | Which ping group (if any) to ping once a match is found. See [Ping Groups](wordwatch.md#ping-groups) for more information
