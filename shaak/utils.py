@@ -201,8 +201,10 @@ class Utils(commands.Cog):
     
     async def log_background_error(self, guild: discord.Guild, error: Exception):
 
+        print(f'log_background_error({guild}, {error}) called')
         guild_settings = await GuildSettings.get(guild_id=guild.id)
         if guild_settings.error_channel == None:
+            print(f'log_background_error({guild}, {error}) no error channel')
             return
         log_channel = self.bot.get_channel(guild_settings.error_channel)
         # you can call this janky. you can call this a hack. you can call
@@ -219,6 +221,7 @@ class Utils(commands.Cog):
         )
         embed.set_footer(text='Error report')
         await log_channel.send(embed=embed)
+            print(f'log_background_error({guild}, {error}) sent')
 
     @commands.command('about')
     async def about(self, ctx: commands.Context):

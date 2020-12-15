@@ -164,7 +164,6 @@ class WordWatch(BaseModule):
             if watch.match_type == MatchType.regex.value:
                 found = list(entry.compiled.finditer(message.content))
                 if found:
-                    print(f'found for id {watch.id}')
                     delete_message = delete_message or watch.auto_delete
                     for match in found:
                         matches.add((
