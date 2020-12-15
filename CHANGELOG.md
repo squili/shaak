@@ -6,6 +6,7 @@
 - Fixed match race condition
 - Fixed forbidden reaction removal in list utility
 - Fixed preview permissions check
+- Depreciated regex match type
 
 ### 1.2.2
 - Fix bad function naming causing massban to not trigger properly

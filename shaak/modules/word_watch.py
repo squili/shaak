@@ -169,16 +169,7 @@ class WordWatch(BaseModule):
                 except DoesNotExist:
                     continue
 
-                if watch.match_type == MatchType.regex.value:
-                    found = list(entry.compiled.finditer(message.content))
-                    if found:
-                        delete_message = delete_message or watch.auto_delete
-                        for match in found:
-                            matches.add((
-                                watch, match.start(0), match.end(0)
-                            ))
-
-                elif watch.match_type == MatchType.word.value:
+                if watch.match_type == MatchType.word.value:
                     if processed_text == None:
                         processed_text = text_preprocess(message.content)
                     found = word_matches(processed_text, entry.compiled)
@@ -294,7 +285,8 @@ class WordWatch(BaseModule):
                         await log_channel.send(content=content, embed=fallback_embed)
         finally:
             end_time = time.time()
-            print(f'scan_message time: {end_time-start_time}')
+            if end_time - start_time >= 1:
+                print(f'WARN message scan took {round(end_time-start_time, 3)} seconds!')
             
     async def scan_loop(self):
 
@@ -475,7 +467,7 @@ class WordWatch(BaseModule):
         embed.set_footer(text=f'{page_number+1}/{page_max}')
         for index, item in items:
             watch: WordWatchWatch = await WordWatchWatch.filter(id=item.id).prefetch_related('group').get()
-            field_name = f'`{index+1}`: {"word" if watch.match_type == MatchType.word.value else "regex"}'
+            field_name = f'`{index+1}`: {"word" if watch.match_type == MatchType.word.value else "contains"}'
             name_extras = [i for i in (
                 'Autodelete' if watch.auto_delete else None,
                 None if watch.ignore_case else 'Cased',
