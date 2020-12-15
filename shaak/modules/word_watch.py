@@ -96,7 +96,7 @@ class WordWatch(BaseModule):
         for watch in await WordWatchWatch.all().prefetch_related('guild', 'group'):
             await self.add_to_cache(watch)
 
-        self.bot.loop.create_task(self.scan_loop())
+        self.bot.loop.create_task(self.scan_task())
 
         await super().initialize()
     
@@ -285,13 +285,13 @@ class WordWatch(BaseModule):
                     fallback_embed.set_footer(text=f'Fallback embed • Ping {product_settings.author_name}!')
                     await log_channel.send(content=content, embed=fallback_embed)
     
-    async def scan_loop(self):
-        item = await self.scan_queue.get()
-        try:
-            await self.scan_message(item)
-            self.bot.loop.create_task(self.scan_loop())
-        except Exception as e:
-            await self.utils.log_background_error(item.guild, e)
+    async def scan_task(self):
+        while True:
+            item = await self.scan_queue.get()
+            try:
+                await self.scan_message(item)
+            except Exception as e:
+                await self.utils.log_background_error(item.guild, e)
 
     async def after_invoke_hook(self, ctx: commands.Context):
 
