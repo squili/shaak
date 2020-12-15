@@ -33,7 +33,8 @@ from shaak.consts      import MatchType, ModuleInfo, watch_setting_map
 from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
                                get_int_ranges, getrange_s, id2mention,
                                link_to_message, mention2id, pluralize,
-                               resolve_mention, possesivize, str2bool)
+                               resolve_mention, possesivize, str2bool,
+                               DiscardingQueue)
 from shaak.matcher  import pattern_preprocess, text_preprocess, word_matches, find_all_contains
 from shaak.models   import (WordWatchSettings, WordWatchPingGroup, WordWatchPing,
                             WordWatchWatch, WordWatchIgnore, Guild)
@@ -61,6 +62,7 @@ class WordWatch(BaseModule):
         super().__init__(*args, **kwargs)
 
         self.watch_cache: Dict[str, WatchCacheEntry] = {}
+        self.scan_queue = DiscardingQueue(0x400)
         self.bot.add_on_error_hooks(self.after_invoke_hook)
     
     async def add_to_cache(self, watch: WordWatchWatch) -> WatchCacheEntry:
@@ -93,6 +95,8 @@ class WordWatch(BaseModule):
         
         for watch in await WordWatchWatch.all().prefetch_related('guild', 'group'):
             await self.add_to_cache(watch)
+
+        self.bot.loop.create_task(self.scan_loop())
 
         await super().initialize()
     
@@ -281,9 +285,17 @@ class WordWatch(BaseModule):
                     fallback_embed.set_footer(text=f'Fallback embed • Ping {product_settings.author_name}!')
                     await log_channel.send(content=content, embed=fallback_embed)
     
+    async def scan_loop(self):
+        item = await self.scan_queue.get()
+        try:
+            await self.scan_message(item)
+        except Exception as e:
+            await self.utils.log_background_error(item.guild, e)
+        self.bot.loop.create_task(self.scan_loop())
+
     async def after_invoke_hook(self, ctx: commands.Context):
 
-        await self.scan_message(ctx.message)
+        await self.scan_queue.put(ctx.message)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -296,13 +308,13 @@ class WordWatch(BaseModule):
 
         guild_prefix = await self.bot.command_prefix(self.bot, message)
         if not message.content.startswith(guild_prefix):
-            await self.scan_message(message)
+            await self.scan_queue.put(message)
     
     @commands.Cog.listener()
     async def on_message_edit(self, old: discord.Message, new: discord.Message):
 
         if old.content != new.content:
-            await self.scan_message(new)
+            await self.scan_queue.put(new)
 
     @commands.command(name='ww.watch')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())

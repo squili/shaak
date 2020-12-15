@@ -11,6 +11,20 @@
             "module": "shaak",
             "args": ["run"],
             "justMyCode": false
-        }
+        },
+        {
+            "name": "Python: Attach",
+            "type": "python",
+            "request": "attach",
+            "port": 5678,
+            "host": "localhost",
+            "pathMappings": [
+              {
+                "localRoot": "${workspaceFolder}", // Maps C:\Users\user1\project1
+                "remoteRoot": "." // To current working directory ~/project1
+              }
+            ],
+            "justMyCode": false
+          }
     ]
 }
