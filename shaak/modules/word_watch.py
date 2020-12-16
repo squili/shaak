@@ -44,8 +44,12 @@ from shaak.utils    import ResponseLevel
 @dataclass
 class WatchCacheEntry:
 
-    id:       int
-    compiled: Any
+    id:          int
+    compiled:    Any
+    ignore_case: bool
+    auto_delete: bool
+    match_type:  int
+    pattern:     str
 
     def __hash__(self):
         return self.id
@@ -72,7 +76,11 @@ class WordWatch(BaseModule):
         
         cache_entry = WatchCacheEntry(
             id=watch.id,
-            compiled=None
+            compiled=None,
+            ignore_case=watch.ignore_case,
+            auto_delete=watch.auto_delete,
+            match_type=watch.match_type,
+            pattern=watch.pattern
         )
 
         if watch.match_type == MatchType.word.value:
@@ -161,28 +169,25 @@ class WordWatch(BaseModule):
             text_lower = None
             for entry in self.watch_cache[message.guild.id]:
 
-                try:
-                    watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
-                except DoesNotExist:
-                    continue
-
-                if watch.match_type == MatchType.word.value:
+                if entry.match_type == MatchType.word.value:
                     if processed_text == None:
                         processed_text = text_preprocess(message.content)
                     found = word_matches(processed_text, entry.compiled)
                     if found:
-                        delete_message = delete_message or watch.auto_delete
+                        delete_message = delete_message or entry.auto_delete
+                        watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
                         for match in found:
                             matches.add((
                                 watch, match[0], match[1]
                             ))
                 
-                elif watch.match_type == MatchType.contains.value:
-                    if watch.ignore_case and text_lower == None:
+                elif entry.match_type == MatchType.contains.value:
+                    if entry.ignore_case and text_lower == None:
                         text_lower = message.content.lower()
-                    found = list(find_all_contains(text_lower if watch.ignore_case else message.content, watch.pattern))
+                    found = list(find_all_contains(text_lower if entry.ignore_case else message.content, entry.pattern))
                     if found:
-                        delete_message = delete_message or watch.auto_delete
+                        delete_message = delete_message or entry.auto_delete
+                        watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
                         for match in found:
                             matches.add((
                                 watch, match[0], match[1]
