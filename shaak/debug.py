@@ -25,6 +25,7 @@ from tortoise    import Tortoise
 
 from shaak.settings import app_settings
 from shaak.consts   import ResponseLevel
+from shaak.models   import WordWatchWatch
 
 class Debug(commands.Cog):
     
@@ -63,3 +64,11 @@ class Debug(commands.Cog):
         for guild in self.bot.guilds:
             entries.append(f'{guild.name} ({guild.id}) - {guild.member_count} members')
         await self.utils.list_items(ctx, entries)
+    
+    @commands.command(name='debug.usage_check')
+    async def debug_usage_check(self, ctx: commands.Context):
+        items = []
+        for i in self.bot.guilds:
+            watch_count = await WordWatchWatch.filter(guild_id=i.id).count()
+            items.append(f'{i.name} ({i.id}): {watch_count}')
+        await self.utils.list_items(ctx, items)

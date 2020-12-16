@@ -813,12 +813,3 @@ class WordWatch(BaseModule):
                 await self.utils.list_items(ctx, [str(i) for i in self.watch_cache[guild_id]])
             else:
                 await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not found')
-    
-    @commands.command(name='debug.usage_check')
-    @is_owner_check()
-    async def debug_usage_check(self, ctx: commands.Context):
-        items = []
-        for i in self.bot.guilds:
-            watch_count = await WordWatchWatch.filter(guild_id=i.id).count()
-            items.append(f'{ctx.guild.name} ({ctx.guild.id}): {watch_count}')
-        await self.utils.list_items(ctx, items)
