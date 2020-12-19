@@ -851,4 +851,4 @@ class WordWatch(BaseModule):
     @is_owner_check()
     async def debug_queue_size(self, ctx: commands.Context):
 
-        await self.utils.respond(ctx, ResponseLevel.success, self.scan_queue._queue.qsize())
+        await self.utils.respond(ctx, ResponseLevel.success, str(self.scan_queue._queue.qsize()))
