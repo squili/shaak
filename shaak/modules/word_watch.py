@@ -20,7 +20,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 import time
 import string
 from dataclasses import dataclass
-from typing      import Any, Dict, List, Optional, Tuple
+from typing      import Any, Dict, List, Optional, Tuple, Set
 
 import discord
 from discord.errors      import HTTPException
@@ -65,7 +65,8 @@ class WordWatch(BaseModule):
         
         super().__init__(*args, **kwargs)
 
-        self.watch_cache: Dict[str, WatchCacheEntry] = {}
+        self.watch_cache:  Dict[int, List[WatchCacheEntry]] = {}
+        self.ignore_cache: Dict[int, Set[int]] = {}
         self.scan_queue = DiscardingQueue(0x400)
         self.bot.add_on_error_hooks(self.after_invoke_hook)
     
@@ -98,9 +99,17 @@ class WordWatch(BaseModule):
 
         for guild in self.bot.guilds:
             self.watch_cache[guild.id] = []
+            self.ignore_cache[guild.id] = set()
         
         for watch in await WordWatchWatch.all().prefetch_related('guild', 'group'):
             await self.add_to_cache(watch)
+        
+        for ignore in await WordWatchIgnore.all().prefetch_related('guild'):
+            if ignore.guild.id in self.ignore_cache:
+                self.ignore_cache[ignore.guild.id].add(ignore.target_id)
+            else:
+                print(f'WARN orphaned ignore entry with id {ignore.id}')
+                await ignore.delete()
 
         self.scan_task = self.bot.loop.create_task(self.scan_loop())
 
@@ -117,6 +126,7 @@ class WordWatch(BaseModule):
         
         if guild.id not in self.watch_cache:
             self.watch_cache[guild.id] = []
+            self.ignore_cache[guild.id] = set()
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
@@ -125,16 +135,14 @@ class WordWatch(BaseModule):
         
         if guild.id in self.watch_cache:
             del self.watch_cache[guild.id]
-        
-    async def is_id_ignored(self, guild_id, target_id):
-        return await WordWatchIgnore.filter(guild_id=guild_id, target_id=target_id).exists()
 
+        if guild.id in self.ignore_cache:
+            del self.ignore_cache[guild.id]
+        
     async def scan_message(self, message: discord.Message):
 
         start_time = time.time()
         try:
-
-            await self.initialized.wait()
             
             if message.guild is None:
                 return
@@ -142,13 +150,16 @@ class WordWatch(BaseModule):
             if message.author.bot:
                 return
             
-            if await self.is_id_ignored(message.guild.id, message.channel.id):
-                return
-
-            if message.channel.category_id and await self.is_id_ignored(message.guild.id, message.channel.category_id):
+            if message.guild.id not in self.ignore_cache:
                 return
             
-            if await self.is_id_ignored(message.guild.id, message.author.id):
+            if message.channel.id in self.ignore_cache[message.guild.id]:
+                return
+
+            if message.channel.category_id and message.channel.category_id in self.ignore_cache[message.guild.id]:
+                return
+            
+            if message.author.id in self.ignore_cache[message.guild.id]:
                 return
             
             check_member = message.webhook_id == None
@@ -160,7 +171,7 @@ class WordWatch(BaseModule):
 
             if check_member:
                 for role in message.author.roles:
-                    if await self.is_id_ignored(message.guild.id, role.id):
+                    if role.id in self.ignore_cache[message.guild.id]:
                         return
             
             delete_message = False
@@ -291,6 +302,8 @@ class WordWatch(BaseModule):
                 print(f'WARN message scan took {round(end_time-start_time, 3)} seconds!')
             
     async def scan_loop(self):
+
+        await self.initialized.wait()
 
         while True:
             item = await self.scan_queue.get()
@@ -579,6 +592,9 @@ class WordWatch(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_ignore(self, ctx: commands.Context, *references: str):
 
+        if ctx.guild.id not in self.ignore_cache:
+            self.ignore_cache[ctx.guild.id] = set()
+
         errors = []
         duplicates = 0
         for index, reference in enumerate(references):
@@ -589,10 +605,11 @@ class WordWatch(BaseModule):
             else:
                 mention_type = await self.utils.guess_id(id, ctx.guild)
             if mention_type in [MentionType.channel, MentionType.role, MentionType.user]:
-                if await self.is_id_ignored(ctx.guild.id, id):
+                if id in self.ignore_cache[ctx.guild.id]:
                     duplicates += 1
                 else:
                     await WordWatchIgnore.create(guild_id=ctx.guild.id, target_id=id, mention_type=mention_type)
+                    self.ignore_cache[ctx.guild.id].add(id)
             else:
                 errors.append(index+1)
 
@@ -630,6 +647,7 @@ class WordWatch(BaseModule):
                 errors.append(index+1)
             else:
                 await target_ignore.delete()
+                self.ignore_cache[ctx.guild.id].remove(id)
 
         if len(errors) > 0:
             await self.utils.respond(ctx, ResponseLevel.general_error,
