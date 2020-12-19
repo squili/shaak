@@ -1,6 +1,7 @@
 ### 1.3.1
 - Added ignore cache
 - Re-enabled regex match type
+- Add debug command to get queue size
 
 ### 1.3.0
 - New docs

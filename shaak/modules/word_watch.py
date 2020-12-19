@@ -838,6 +838,7 @@ class WordWatch(BaseModule):
     @commands.command(name='debug.list_cache')
     @is_owner_check()
     async def debug_list_cache(self, ctx: commands.Context, guild_id: int = None):
+
         if guild_id == None:
             await self.utils.list_items(ctx, [str(i) for i in self.watch_cache])
         else:
@@ -845,3 +846,9 @@ class WordWatch(BaseModule):
                 await self.utils.list_items(ctx, [str(i) for i in self.watch_cache[guild_id]])
             else:
                 await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not found')
+    
+    @commands.command(name='debug.queue_size')
+    @is_owner_check()
+    async def debug_queue_size(self, ctx: commands.Context):
+
+        await self.utils.respond(ctx, ResponseLevel.success, self.scan_queue._queue.qsize())
