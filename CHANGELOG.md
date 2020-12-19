@@ -1,5 +1,6 @@
 ### 1.3.1
 - Added ignore cache
+- Re-enabled regex match type
 
 ### 1.3.0
 - New docs

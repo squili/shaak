@@ -19,6 +19,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
 import time
 import string
+import re
 from dataclasses import dataclass
 from typing      import Any, Dict, List, Optional, Tuple, Set
 
@@ -88,6 +89,8 @@ class WordWatch(BaseModule):
             cache_entry.compiled = pattern_preprocess(watch.pattern)
         elif watch.match_type == MatchType.contains.value:
             pass
+        elif watch.match_type == MatchType.regex.value:
+            cache_entry.compiled = re.compile(watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
         else:
             print(f'ERR bad watch cache entry with id {watch.id}: {watch.match_type} is not a valid match type. this should never happen!')
             return None
@@ -114,10 +117,6 @@ class WordWatch(BaseModule):
         self.scan_task = self.bot.loop.create_task(self.scan_loop())
 
         await super().initialize()
-    
-    async def uninitialize(self):
-        await self.scan_queue.put(None)
-        await self.scan_task
     
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
@@ -180,7 +179,17 @@ class WordWatch(BaseModule):
             text_lower = None
             for entry in self.watch_cache[message.guild.id]:
 
-                if entry.match_type == MatchType.word.value:
+                if entry.match_type == MatchType.regex.value:
+                    found = list(entry.compiled.finditer(message.content))
+                    if found:
+                        delete_message = delete_message or entry.auto_delete
+                        watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
+                        for match in found:
+                            matches.add((
+                                watch, match.start(0), match.end(0)
+                            ))
+
+                elif entry.match_type == MatchType.word.value:
                     if processed_text == None:
                         processed_text = text_preprocess(message.content)
                     found = word_matches(processed_text, entry.compiled)

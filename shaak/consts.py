@@ -67,7 +67,8 @@ setting_structure = {
 
 class MatchType(Enum):
     contains = 0
-    word = 1
+    word     = 1
+    regex    = 2
 
 def str_to_match_type(stuff: str) -> MatchType:
     if stuff.startswith('_'):
