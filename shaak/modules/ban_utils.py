@@ -566,7 +566,7 @@ class BanUtils(BaseModule):
                     await self.utils.respond(ctx, ResponseLevel.general_error,
                         "WARNING: No foreign event channel set, so you won't receive events from this server!")
 
-                foreign_settings = await BanUtilSettings.get(guild_id=invite.from_guild.id)
+                foreign_settings = await BanUtilSettings.get(guild_id=source_guild_id)
                 if foreign_settings.foreign_log_channel != None:
                     target_channel = self.bot.get_channel(foreign_settings.foreign_log_channel)
                     if target_channel != None:
