@@ -1,3 +1,10 @@
+### 1.4.0a2
+- New migrations
+- New docs
+- Added `uw.header` command
+- Added `uw.list` command
+- Made `uw.watch` and `uw.unwatch` accept multiple users at once
+
 ### 1.4.0a
 - New migrations
 - New docs

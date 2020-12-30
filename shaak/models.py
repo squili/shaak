@@ -115,6 +115,7 @@ class UserWatchSettings(Model, ModuleSettingsMixin):
     guild         = fields.ForeignKeyField ('models.Guild', related_name='user_watch_settings')
     log_channel   = fields.BigIntField     (null=True)
     cooldown_time = fields.IntField        (default=900000)
+    header        = fields.TextField       (null=True)
 
 class UserWatchWatch(Model):
     guild   = fields.ForeignKeyField ('models.Guild', related_name='user_watch_watch')

@@ -12,3 +12,9 @@
 
 `uw.unwatch (user)`
 :   Removes a user from the watch
+
+`uw.header [header]`
+:   Sets the log header. Call with no text to see the current header, and either `clear`, `reset`, or `disable` to disable the header
+
+`uw.list`
+:   Lists your current user watch entries

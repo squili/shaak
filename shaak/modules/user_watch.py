@@ -25,7 +25,8 @@ from tortoise.exceptions import DoesNotExist
 from shaak.base_module import BaseModule
 from shaak.consts      import ModuleInfo, ResponseLevel, MentionType
 from shaak.checks      import has_privlidged_role_check
-from shaak.helpers     import get_or_create, time_ms, link_to_message, mention2id, id2mention
+from shaak.errors      import InvalidId
+from shaak.helpers     import get_or_create, time_ms, link_to_message, mention2id, id2mention, pluralize, commas
 from shaak.models      import UserWatchSettings, UserWatchWatch
 
 class UserWatch(BaseModule):
@@ -100,7 +101,7 @@ class UserWatch(BaseModule):
                             if attachment.height != None and attachment.width != None: # only images have these fields filled
                                 embed.set_image(url=attachment.url or attachment.proxy_url)
 
-                    await log_channel.send(embed=embed)
+                    await log_channel.send(module_settings.header, embed=embed)
             
             self.last_report_time[message.guild.id][message.author.id] = time_ms()
     
@@ -150,39 +151,100 @@ class UserWatch(BaseModule):
     
     @commands.command(name='uw.watch')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def uw_watch(self, ctx: commands.Context, target_user: str):
+    async def uw_watch(self, ctx: commands.Context, *target_users: str):
 
-        try:
-            target_id = int(target_user)
-        except ValueError:
-            target_id = mention2id(target_user, MentionType.user)
+        if len(target_users) == 0:
+            await self.utils.respond(ctx, ResponseLevel.success, "You're not giving me much to work with here")
 
-        if target_id in get_or_create(self.user_watch_cache, ctx.guild.id, set()):
-            await self.utils.respond(ctx, ResponseLevel.general_error, 'User already watched')
-            return
+        invalid_ids = 0
+        duplicates = 0
+        additions = 0
+
+        for target_user in target_users:
+            try:
+                target_id = mention2id(target_user, MentionType.user)
+            except InvalidId:
+                invalid_ids += 1
+
+            if target_id in get_or_create(self.user_watch_cache, ctx.guild.id, set()):
+                duplicates += 1
+            else:
+                await UserWatchWatch.create(guild_id=ctx.guild.id, user_id=target_id)
+                self.user_watch_cache[ctx.guild.id].add(target_id)
+                self.last_report_time[ctx.guild.id][target_id] = 0
+                additions += 1
         
-        await UserWatchWatch.create(guild_id=ctx.guild.id, user_id=target_id)
-        self.user_watch_cache[ctx.guild.id].add(target_id)
-        self.last_report_time[ctx.guild.id][target_id] = 0
+        message_parts = []
+        if additions:
+            message_parts.append(f'added {additions} new watch{pluralize("", "es", additions)}')
+        if invalid_ids:
+            message_parts.append(f'skipped {invalid_ids} invalid id{pluralize("", "s", invalid_ids)}')
+        if duplicates:
+            message_parts.append(f'skipped {duplicates} duplicate watch{pluralize("", "es", duplicates)}')
+        
+        await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
 
-        await self.utils.respond(ctx, ResponseLevel.success)
-    
+        module_settings: UserWatchSettings = await UserWatchSettings.get(guild_id=ctx.guild.id)
+        if module_settings.log_channel == None:
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'WARNING: You have no log channel set, so nothing will be logged!')
+
     @commands.command(name='uw.unwatch')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def uw_unwatch(self, ctx: commands.Context, target_user: str):
+    async def uw_unwatch(self, ctx: commands.Context, *target_users: str):
 
-        try:
-            target_id = int(target_user)
-        except ValueError:
-            target_id = mention2id(target_user, MentionType.user)
+        if len(target_users) == 0:
+            await self.utils.respond(ctx, ResponseLevel.success, 'Cmon man')
 
-        await UserWatchWatch.filter(guild_id=ctx.guild.id, user_id=target_id).delete()
-        try:
-            self.user_watch_cache[ctx.guild.id].remove(target_id)
-        except KeyError:
-            await self.utils.respond(ctx, ResponseLevel.general_error, 'Watch not found')
-        else:
-            if target_id in self.last_report_time[ctx.guild.id]:
-                del self.last_report_time[ctx.guild.id][target_id]
+        invalid_ids = 0
+        not_found = 0
+        removals = 0
+
+        for target_user in target_users:
+            try:
+                target_id = mention2id(target_user, MentionType.user)
+            except InvalidId:
+                invalid_ids += 1
+
+            await UserWatchWatch.filter(guild_id=ctx.guild.id, user_id=target_id).delete()
+            try:
+                self.user_watch_cache[ctx.guild.id].remove(target_id)
+            except KeyError:
+                not_found += 1
+            else:
+                if target_id in self.last_report_time[ctx.guild.id]:
+                    del self.last_report_time[ctx.guild.id][target_id]
+                removals += 1
+        
+        message_parts = []
+        if removals:
+            message_parts.append(f'removed {removals} watch{pluralize("", "es", removals)}')
+        if invalid_ids:
+            message_parts.append(f'skipped {invalid_ids} invalid id{pluralize("", "s", invalid_ids)}')
+        if not_found:
+            message_parts.append(f'skipped {not_found} not found watch{pluralize("", "es", not_found)}')
+        
+        await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
+
+    @commands.command(name='uw.header')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def uw_header(self, ctx: commands.Context, *, header_message: Optional[str] = None):
+
+        if header_message:
+            if header_message in ['clear', 'reset', 'disable']:
+                await UserWatchSettings.filter(guild_id=ctx.guild.id).update(header=None)
+            else:
+                await UserWatchSettings.filter(guild_id=ctx.guild.id).update(header=header_message)
             await self.utils.respond(ctx, ResponseLevel.success)
+        else:
+            module_settings: UserWatchSettings = await UserWatchSettings.get(guild_id=ctx.guild.id)
+            await self.utils.respond(ctx, ResponseLevel.success, module_settings.header or 'No header set')
     
+    @commands.command(name='uw.list')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def uw_list(self, ctx: commands.Context):
+
+        if len(self.user_watch_cache[ctx.guild.id]) == 0:
+            await self.utils.respond(ctx, ResponseLevel.success, 'No watches found')
+            return
+        
+        await self.utils.list_items(ctx, [id2mention(i, MentionType.user) for i in self.user_watch_cache[ctx.guild.id]])

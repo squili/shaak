@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "ALTER TABLE \"userwatchsettings\" ADD \"header\" TEXT"
+  ],
+  "downgrade": [
+    "ALTER TABLE \"userwatchsettings\" DROP COLUMN \"header\""
+  ]
+}
