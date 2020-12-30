@@ -9,3 +9,4 @@ Welcome to the Shaak documentation!
 - [Word Watch](wordwatch.md)
 - [Previews](previews.md)
 - [Ban Utils](banutils.md)
+- [User Watch](userwatch.md)
