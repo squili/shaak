@@ -169,14 +169,19 @@ class UserWatch(BaseModule):
     
     @commands.command(name='uw.unwatch')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def uw_unwatch(self, ctx: commands.Context, target_user: discord.User):
+    async def uw_unwatch(self, ctx: commands.Context, target_user: str):
 
         try:
-            await UserWatchWatch.filter(guild_id=ctx.guild.id, user_id=target_user.id).delete()
+            target_id = int(target_user)
+        except ValueError:
+            target_id = mention2id(target_user, MentionType.user)
+
+        try:
+            await UserWatchWatch.filter(guild_id=ctx.guild.id, user_id=target_id).delete()
         except DoesNotExist:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Watch not found')
         else:
-            self.user_watch_cache[ctx.guild.id].remove(target_user.id)
-            del self.last_report_time[ctx.guild.id][target_user.id]
+            self.user_watch_cache[ctx.guild.id].remove(target_id)
+            del self.last_report_time[ctx.guild.id][target_id]
             await self.utils.respond(ctx, ResponseLevel.success)
     
