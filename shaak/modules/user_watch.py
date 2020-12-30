@@ -176,12 +176,12 @@ class UserWatch(BaseModule):
         except ValueError:
             target_id = mention2id(target_user, MentionType.user)
 
+        await UserWatchWatch.filter(guild_id=ctx.guild.id, user_id=target_id).delete()
         try:
-            await UserWatchWatch.filter(guild_id=ctx.guild.id, user_id=target_id).delete()
-        except DoesNotExist:
+            self.user_watch_cache[ctx.guild.id].remove(target_id)
+        except KeyError:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Watch not found')
         else:
-            self.user_watch_cache[ctx.guild.id].remove(target_id)
             if target_id in self.last_report_time[ctx.guild.id]:
                 del self.last_report_time[ctx.guild.id][target_id]
             await self.utils.respond(ctx, ResponseLevel.success)
