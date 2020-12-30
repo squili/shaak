@@ -2,6 +2,7 @@
 - New migrations
 - New docs
 - Added `user_watch` module
+- Cross-guild previews now show the source guild
 - Fixed reasonless bans causing errors
 
 ### 1.3.2
