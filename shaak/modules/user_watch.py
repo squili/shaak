@@ -150,15 +150,20 @@ class UserWatch(BaseModule):
     
     @commands.command(name='uw.watch')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def uw_watch(self, ctx: commands.Context, target_user: discord.User):
+    async def uw_watch(self, ctx: commands.Context, target_user: str):
 
-        if target_user.id in get_or_create(self.user_watch_cache, ctx.guild.id, set()):
+        try:
+            target_id = int(target_user)
+        except ValueError:
+            target_id = mention2id(target_user, MentionType.user)
+
+        if target_id in get_or_create(self.user_watch_cache, ctx.guild.id, set()):
             await self.utils.respond(ctx, ResponseLevel.general_error, 'User already watched')
             return
         
-        await UserWatchWatch.create(guild_id=ctx.guild.id, user_id=target_user.id)
-        self.user_watch_cache[ctx.guild.id].add(target_user.id)
-        self.last_report_time[ctx.guild.id][target_user.id] = 0
+        await UserWatchWatch.create(guild_id=ctx.guild.id, user_id=target_id)
+        self.user_watch_cache[ctx.guild.id].add(target_id)
+        self.last_report_time[ctx.guild.id][target_id] = 0
 
         await self.utils.respond(ctx, ResponseLevel.success)
     
