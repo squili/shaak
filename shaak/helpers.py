@@ -18,6 +18,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 # pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
 import asyncio
+import time
 import re
 import platform
 from datetime import datetime
@@ -210,3 +211,11 @@ class DiscardingQueue:
             self._queue.get_nowait()
             print('WARN queue discarding messages')
         return await self._queue.put(item)
+
+def get_or_create(d, k, t):
+    if k not in d:
+        d[k] = t
+    return d[k]
+
+def time_ms():
+    return round(time.time() * 1000)

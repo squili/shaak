@@ -84,7 +84,7 @@ class BanUtilBanEvent(Model):
     message_channel = fields.BigIntField     ()
     target_id       = fields.BigIntField     ()
     banner_id       = fields.BigIntField     ()
-    ban_reason      = fields.TextField       ()
+    ban_reason      = fields.TextField       (null=True)
     timestamp       = fields.DatetimeField   (auto_now_add=True)
     banned          = fields.BooleanField    (default=True)
     reported        = fields.DatetimeField   (default=None, null=True)
@@ -110,3 +110,12 @@ class BanUtilSubscription(Model):
 class BanUtilBlock(Model):
     guild   = fields.ForeignKeyField ('models.Guild', related_name='ban_util_blocks')
     blocked = fields.ForeignKeyField ('models.Guild', related_name='ban_util_blocked')
+
+class UserWatchSettings(Model, ModuleSettingsMixin):
+    guild         = fields.ForeignKeyField ('models.Guild', related_name='user_watch_settings')
+    log_channel   = fields.BigIntField     (null=True)
+    cooldown_time = fields.IntField        (default=900000)
+
+class UserWatchWatch(Model):
+    guild   = fields.ForeignKeyField ('models.Guild', related_name='user_watch_watch')
+    user_id = fields.BigIntField()

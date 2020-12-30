@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "ALTER TABLE \"banutilbanevent\" ALTER COLUMN \"ban_reason\" DROP NOT NULL"
+  ],
+  "downgrade": [
+    "ALTER TABLE \"banutilbanevent\" ALTER COLUMN \"ban_reason\" SET NOT NULL"
+  ]
+}

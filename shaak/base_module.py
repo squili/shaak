@@ -32,8 +32,8 @@ class BaseModule(commands.Cog):
 
     def __init__(self, bot: CustomBot):
         
-        self.bot          = bot
-        self.utils        = bot.get_cog('Utils')
+        self.bot   = bot
+        self.utils = bot.get_cog('Utils')
         if self.utils == None:
             raise RuntimeError('Failed getting Utils cog')
         self.initialized = asyncio.Event()

@@ -32,6 +32,7 @@ from shaak.debug     import Debug
 from shaak.modules.word_watch import WordWatch
 from shaak.modules.previews   import Previews
 from shaak.modules.ban_utils  import BanUtils
+from shaak.modules.user_watch import UserWatch
 
 from shaak.tasks.guild_cleanup    import GuildCleanupTask
 from shaak.tasks.bu_event_cleanup import BUEventCleanupTask
@@ -85,6 +86,7 @@ async def start_bot():
     manager.load_module(WordWatch)
     manager.load_module(Previews)
     manager.load_module(BanUtils)
+    manager.load_module(UserWatch)
 
     # load tasks
     print('Loading tasks')

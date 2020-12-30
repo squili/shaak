@@ -1,3 +1,9 @@
+### 1.4.0a
+- New migrations
+- New docs
+- Added `user_watch` module
+- Fixed reasonless bans causing errors
+
 ### 1.3.2
 - Fixed `AtrributeError` during subscriptions
 

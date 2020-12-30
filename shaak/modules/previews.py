@@ -39,7 +39,8 @@ class Previews(BaseModule):
         settings=PreviewSettings
     )
 
-    async def send_message_preview(self, target_channel: discord.TextChannel, link: str, checking_user: discord.User) -> int:
+    async def send_message_preview(self, target_channel: discord.TextChannel, link: str,
+                                   checking_user: discord.User, source_guild: discord.Guild) -> int:
 
         try:
             parts = link.split('/')
@@ -75,6 +76,8 @@ class Previews(BaseModule):
         )
         embed.add_field(name='Channel', value=id2mention(channel_id, MentionType.channel))
         embed.add_field(name='Author', value=id2mention(message.author.id, MentionType.user))
+        if source_guild.id != guild.id:
+            embed.add_field(name='Guild', value=f'{source_guild.name} ({source_guild.id})')
 
         await target_channel.send(embed=embed)
         if len(message.embeds) > 0:
@@ -104,14 +107,14 @@ class Previews(BaseModule):
                     log_channel = self.bot.get_channel(module_settings.log_channel)
                 
                 for match in matches:
-                    await self.send_message_preview(log_channel or message.channel, match, message.author)
+                    await self.send_message_preview(log_channel or message.channel, match, message.author, message.guild)
         except Exception as e:
             await self.utils.log_background_error(item.guild, e)
     
     @commands.command('pv.view')
     async def pv_view(self, ctx: commands.Context, link: str):
 
-        err = await self.send_message_preview(ctx.channel, link, ctx.author)
+        err = await self.send_message_preview(ctx.channel, link, ctx.author, ctx.guild)
         if   err == 1:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Malformed message link')
         elif err == 2:

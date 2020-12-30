@@ -1,0 +1,12 @@
+{
+  "upgrade": [
+    "ALTER TABLE \"userwatchsettings\" ADD \"log_channel\" BIGINT",
+    "ALTER TABLE \"userwatchsettings\" ADD \"cooldown_time\" INT NOT NULL  DEFAULT 900000",
+    "CREATE TABLE IF NOT EXISTS \"userwatchwatch\" (\n    \"id\" SERIAL NOT NULL PRIMARY KEY,\n    \"user_id\" BIGINT NOT NULL,\n    \"guild_id\" BIGINT NOT NULL REFERENCES \"guild\" (\"id\") ON DELETE CASCADE\n);"
+  ],
+  "downgrade": [
+    "ALTER TABLE \"userwatchsettings\" DROP COLUMN \"log_channel\"",
+    "ALTER TABLE \"userwatchsettings\" DROP COLUMN \"cooldown_time\"",
+    "DROP TABLE IF EXISTS \"userwatchwatch\""
+  ]
+}

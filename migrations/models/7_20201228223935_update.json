@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "CREATE TABLE IF NOT EXISTS \"userwatchsettings\" (\n    \"id\" SERIAL NOT NULL PRIMARY KEY,\n    \"enabled\" BOOL NOT NULL  DEFAULT False,\n    \"guild_id\" BIGINT NOT NULL REFERENCES \"guild\" (\"id\") ON DELETE CASCADE\n);"
+  ],
+  "downgrade": [
+    "DROP TABLE IF EXISTS \"userwatchsettings\""
+  ]
+}

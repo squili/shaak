@@ -61,6 +61,9 @@ class Manager(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
 
+        if self.bot.manager_ready.is_set():
+            return # reconnects trigger on_ready as well
+
         print('Initializing guilds')
 
         curr_ids = set()
