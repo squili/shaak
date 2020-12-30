@@ -1,11 +1,15 @@
-### 1.4.0a2
+### 1.4.0rc2
+- Fixed `uw.cooldown` not updating the cooldown for cached entries
+- Fixed `UnboundLocalError` when giving an invalid and valid id to `uw.watch`
+
+### 1.4.0rc1
 - New migrations
 - New docs
 - Added `uw.header` command
 - Added `uw.list` command
 - Made `uw.watch` and `uw.unwatch` accept multiple users at once
 
-### 1.4.0a
+### 1.4.0rc0
 - New migrations
 - New docs
 - Added `user_watch` module

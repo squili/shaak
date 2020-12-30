@@ -134,6 +134,7 @@ class UserWatch(BaseModule):
         if cooldown:
             if cooldown in ['clear', 'reset', 'disable']:
                 await UserWatchSettings.filter(guild_id=ctx.guild.id).update(cooldown_time=900000)
+                self.watch_cooldown_cache[ctx.guild.id] = 900000
             else:
                 try:
                     cooldown_time = int(cooldown)
@@ -144,6 +145,7 @@ class UserWatch(BaseModule):
                     await self.utils.respond(ctx, ResponseLevel.general_error, 'Cooldown too long')
                     return
                 await UserWatchSettings.filter(guild_id=ctx.guild.id).update(cooldown_time=cooldown_time)
+                self.watch_cooldown_cache[ctx.guild.id] = cooldown_time
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
             module_settings: UserWatchSettings = await UserWatchSettings.filter(guild_id=ctx.guild.id).only('cooldown_time').get()
@@ -165,6 +167,7 @@ class UserWatch(BaseModule):
                 target_id = mention2id(target_user, MentionType.user)
             except InvalidId:
                 invalid_ids += 1
+                continue
 
             if target_id in get_or_create(self.user_watch_cache, ctx.guild.id, set()):
                 duplicates += 1
