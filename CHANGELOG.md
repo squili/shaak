@@ -1,5 +1,6 @@
 ### 1.4.0
 - Fixed `s` matching
+- Fixed `str2bool` not properly handling booleans
 
 ### 1.4.0rc2
 - Fixed `uw.cooldown` not updating the cooldown for cached entries

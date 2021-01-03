@@ -42,7 +42,10 @@ def all_str(iterator):
     for item in iterator:
         yield str(item)
 
-def str2bool(msg: str) -> Optional[bool]:
+def str2bool(msg: Union[str, bool]) -> Optional[bool]:
+
+    if isinstance(msg, bool):
+        return msg
     
     if msg.lower() in ['false', 'no', 'disable', 'off']:
         return False
