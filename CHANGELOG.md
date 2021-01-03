@@ -1,3 +1,6 @@
+### 1.4.0
+- Fixed `s` matching
+
 ### 1.4.0rc2
 - Fixed `uw.cooldown` not updating the cooldown for cached entries
 - Fixed `UnboundLocalError` when giving an invalid and valid id to `uw.watch`
