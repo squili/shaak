@@ -1,3 +1,6 @@
+### 1.4.1
+- Fixed previews showing the wrong guild
+
 ### 1.4.0
 - Fixed `s` matching
 - Fixed `str2bool` not properly handling booleans
