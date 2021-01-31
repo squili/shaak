@@ -17,6 +17,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 
 # pylint: disable=unsubscriptable-object   # pylint/issues/3882
 
+import logging
 from typing import Dict, Optional
 
 import discord
@@ -27,6 +28,8 @@ from shaak.consts     import ModuleInfo, ResponseLevel, setting_structure
 from shaak.models     import Guild, GuildSettings
 from shaak.settings   import app_settings
 from shaak.custom_bot import CustomBot
+
+logger = logging.getLogger('shaak_manager')
 
 class Manager(commands.Cog):
 
@@ -43,7 +46,7 @@ class Manager(commands.Cog):
     def load_module(self, cls):
         
         if not hasattr(cls, 'meta') or not isinstance(cls.meta, ModuleInfo):
-            print(f'Invalid module metadata: {cls.__name__}')
+            logger.warn(f'Invalid module metadata: {cls.__name__}')
             return
         
         loaded_cog = cls(self.bot)
@@ -64,7 +67,7 @@ class Manager(commands.Cog):
         if self.bot.manager_ready.is_set():
             return # reconnects trigger on_ready as well
 
-        print('Initializing guilds')
+        logger.info('Initializing guilds')
 
         curr_ids = set()
         for guild in self.bot.guilds:
@@ -83,7 +86,7 @@ class Manager(commands.Cog):
             if db_guild.id not in curr_ids:
                 await db_guild.delete()
         
-        print('Initializing modules')
+        logger.info('Initializing modules')
         
         for module in self.added_cogs:
             await module.initialize()
@@ -99,14 +102,14 @@ class Manager(commands.Cog):
         
         self.bot.manager_ready.set()
         
-        print('Manager initialized')
+        logger.info('Manager initialized')
     
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
         
         await self.bot.manager_ready.wait()
 
-        print(f'Added to guild {guild.name} ({guild.id})')
+        logger.info(f'Added to guild {guild.name} ({guild.id})')
 
         # initialize database
         await Guild.get_or_create(id=guild.id)
@@ -122,7 +125,7 @@ class Manager(commands.Cog):
         
         await self.bot.manager_ready.wait()
 
-        print(f'Removed from guild {guild.name} ({guild.id})')
+        logger.info(f'Removed from guild {guild.name} ({guild.id})')
 
     @commands.command('modules.enable')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())

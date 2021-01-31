@@ -16,6 +16,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 import asyncio
+import logging
 import signal
 
 import discord
@@ -37,9 +38,11 @@ from shaak.modules.user_watch import UserWatch
 from shaak.tasks.guild_cleanup    import GuildCleanupTask
 from shaak.tasks.bu_event_cleanup import BUEventCleanupTask
 
+logger = logging.getLogger('shaak_start')
+
 async def start_bot():
 
-    print('Initializing database')
+    logger.info('Initializing database')
 
     # initialize database before starting bot
     await Tortoise.init(
@@ -73,7 +76,7 @@ async def start_bot():
     )
     
     # add cogs
-    print('Loading cogs')
+    logger.info('Loading cogs')
     bot.add_cog(Utils(bot))
     bot.add_cog(Debug(bot))
     manager = Manager(bot)
@@ -82,14 +85,14 @@ async def start_bot():
     bot.add_cog(conductor)
     
     # load modules
-    print('Loading modules')
+    logger.info('Loading modules')
     manager.load_module(WordWatch)
     manager.load_module(Previews)
     manager.load_module(BanUtils)
     manager.load_module(UserWatch)
 
     # load tasks
-    print('Loading tasks')
+    logger.info('Loading tasks')
     conductor.load_task(GuildCleanupTask)
     conductor.load_task(BUEventCleanupTask)
 
@@ -98,10 +101,10 @@ async def start_bot():
     loop.add_signal_handler(signal.SIGINT, lambda: loop.create_task(bot.close()))
     loop.add_signal_handler(signal.SIGTERM, lambda: loop.create_task(bot.close()))
     try:
-        print('Starting bot')
+        logger.info('Starting bot')
         await bot.start(app_settings.token, reconnect=True)
     except discord.PrivilegedIntentsRequired:
-        print('An intent is required! Please go to https://discord.com/developers/applications/ and enable it.')
+        logger.info('An intent is required! Please go to https://discord.com/developers/applications/ and enable it.')
         exit(1)
     finally:
         if not bot.is_closed():

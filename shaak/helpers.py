@@ -19,8 +19,9 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
 import time
-import re
+import logging
 import platform
+import re
 from datetime import datetime
 from typing   import Optional, List, Any, Tuple, Union, TypeVar
 
@@ -28,6 +29,8 @@ import discord
 
 from shaak.errors import InvalidId
 from shaak.models import GuildSettings
+
+logger = logging.getLogger('shaak_helpers')
 
 _T = TypeVar('T')
 
@@ -212,7 +215,7 @@ class DiscardingQueue:
     async def put(self, item):
         while self._queue.full():
             self._queue.get_nowait()
-            print('WARN queue discarding messages')
+            logger.warn('queue discarding messages')
         return await self._queue.put(item)
 
 def get_or_create(d, k, t):

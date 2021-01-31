@@ -17,11 +17,14 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 from tortoise import Tortoise
 
 from shaak.models import GlobalSettings
+
+logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 
 def ask_user(msg: str, default_true: bool = True):
     return input(f'{msg} [{"Y" if default_true else "y"}/{"n" if default_true else "N"}] ').strip().lower()[0:] in (['y', ''] if default_true else ['y'])
@@ -34,7 +37,7 @@ async def init_db():
     default_prefix = input('Default prefix [-]: ').strip() or '-'
     default_verbosity = ask_user('Default verbosity', True)
 
-    print('Initializing database')
+    logging.info('Initializing database')
     await Tortoise.init(
         db_url=app_settings.database_url,
         modules={
@@ -44,12 +47,12 @@ async def init_db():
     conn = Tortoise.get_connection('default')
     resp = await conn.execute_query("select * from information_schema.tables where table_schema = 'public'")
     if resp[0] > 0:
-        print('Dropping tables')
+        logging.info('Dropping tables')
     for table in resp[1]:
         await conn.execute_query(f"drop table {table['table_name']} cascade")
-    print('Generating schemas')
+    logging.info('Generating schemas')
     await Tortoise.generate_schemas(safe=False)
-    print('Writing global settings')
+    logging.info('Writing global settings')
     await GlobalSettings.create(
         default_prefix=default_prefix,
         default_verbosity=default_verbosity
@@ -77,7 +80,7 @@ def initialize_bot():
         except KeyboardInterrupt:
             return
 
-        print('Writing settings')
+        logging.info('Writing settings')
         with settings_path.open('w') as f:
             json.dump(settings, f, indent=4)
 

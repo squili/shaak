@@ -16,6 +16,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 import asyncio
+import logging
 import time
 from dataclasses import dataclass
 from typing      import List, Coroutine
@@ -25,6 +26,8 @@ from discord.ext import commands
 from shaak.base_task  import BaseTask
 from shaak.custom_bot import CustomBot
 from shaak.consts     import TaskInfo
+
+logger = logging.getLogger('shaak_conductor')
 
 @dataclass
 class TaskStore:
@@ -42,7 +45,7 @@ class Conductor(commands.Cog):
     def load_task(self, cls):
 
         if not hasattr(cls, 'meta') or not isinstance(cls.meta, TaskInfo):
-            print(f'Invalid task metadata: {cls.__name__}')
+            logger.warn(f'Invalid task metadata: {cls.__name__}')
             return
         
         self.new_tasks.append(cls(self.bot))
@@ -54,7 +57,7 @@ class Conductor(commands.Cog):
         self.loop.create_task(self.task_callback(task))
     
     async def process_new_tasks(self):
-        print('Conductor started')
+        logger.info('Conductor started')
         for task in self.new_tasks:
             await task.initialize()
             self.loop.create_task(

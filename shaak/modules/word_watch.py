@@ -17,6 +17,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 
 # pylint: disable=unsubscriptable-object # pylint/issues/3882
 import time
+import logging
 import string
 import re
 from dataclasses import dataclass
@@ -40,6 +41,8 @@ from shaak.models   import (WordWatchSettings, WordWatchPingGroup, WordWatchPing
                             WordWatchWatch, WordWatchIgnore, Guild)
 from shaak.settings import product_settings
 from shaak.utils    import ResponseLevel
+
+logger = logging.getLogger('shaak_word_watch')
 
 @dataclass
 class WatchCacheEntry:
@@ -91,7 +94,7 @@ class WordWatch(BaseModule):
         elif watch.match_type == MatchType.regex.value:
             cache_entry.compiled = re.compile(watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
         else:
-            print(f'ERR bad watch cache entry with id {watch.id}: {watch.match_type} is not a valid match type. this should never happen!')
+            logger.error(f'bad watch cache entry with id {watch.id}: {watch.match_type} is not a valid match type. this should never happen!')
             return None
 
         self.watch_cache[watch.guild.id].append(cache_entry)
@@ -110,7 +113,7 @@ class WordWatch(BaseModule):
             if ignore.guild.id in self.ignore_cache:
                 self.ignore_cache[ignore.guild.id].add(ignore.target_id)
             else:
-                print(f'WARN orphaned ignore entry with id {ignore.id}')
+                logger.warn(f'orphaned ignore entry with id {ignore.id}')
                 await ignore.delete()
 
         self.scan_task = self.bot.loop.create_task(self.scan_loop())
@@ -307,7 +310,7 @@ class WordWatch(BaseModule):
         finally:
             end_time = time.time()
             if end_time - start_time >= 1:
-                print(f'WARN message scan took {round(end_time-start_time, 3)} seconds!')
+                logger.warn(f'message scan took {round(end_time-start_time, 3)} seconds!')
             
     async def scan_loop(self):
 

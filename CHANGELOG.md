@@ -1,3 +1,6 @@
+### 1.4.2
+- Added better logging
+
 ### 1.4.1
 - Fixed previews showing the wrong guild
 
