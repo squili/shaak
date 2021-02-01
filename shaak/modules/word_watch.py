@@ -73,7 +73,7 @@ class WordWatch(BaseModule):
         self.scan_queue = DiscardingQueue(0x400)
         self.bot.add_on_error_hooks(self.after_invoke_hook)
     
-    async def add_to_cache(self, watch: WordWatchWatch) -> WatchCacheEntry:
+    async def add_to_cache(self, watch: WordWatchWatch) -> None:
 
         if watch.guild.id not in self.watch_cache:
             self.watch_cache[watch.guild.id] = []
@@ -87,18 +87,24 @@ class WordWatch(BaseModule):
             pattern=watch.pattern
         )
 
-        if watch.match_type == MatchType.word.value:
-            cache_entry.compiled = pattern_preprocess(watch.pattern)
-        elif watch.match_type == MatchType.contains.value:
-            pass
-        elif watch.match_type == MatchType.regex.value:
-            cache_entry.compiled = re.compile(watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
-        else:
-            logger.error(f'bad watch cache entry with id {watch.id}: {watch.match_type} is not a valid match type. this should never happen!')
-            return None
+        try:
+            if watch.match_type == MatchType.word.value:
+                cache_entry.compiled = pattern_preprocess(watch.pattern)
+            elif watch.match_type == MatchType.contains.value:
+                pass
+            elif watch.match_type == MatchType.regex.value:
+                cache_entry.compiled = re.compile(watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
+            else:
+                logger.error(f'bad watch cache entry with id {watch.id}: {watch.match_type} is not a valid match type. this should never happen!')
+                return
+        except Exception:
+            # if preprocessing fails, remove it from the database. if we don't do this,
+            # invalid entries will be added to startup and cause modules to never fully load
+            await watch.delete()
+            return
 
         self.watch_cache[watch.guild.id].append(cache_entry)
-        return cache_entry
+        return
 
     async def initialize(self):
 

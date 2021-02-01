@@ -1,3 +1,6 @@
+### 1.4.3
+- Fixed invalid regex patterns cause modules to not properly initialize
+
 ### 1.4.2
 - Added better logging
 
