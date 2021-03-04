@@ -52,7 +52,7 @@ response_map = {
     ResponseLevel.success:         [ '✅', color_green ],
     ResponseLevel.general_error:   [ '❌', color_red   ],
     ResponseLevel.forbidden:       [ '⛔', color_red   ],
-    ResponseLevel.internal_error:  [ '‼️', color_red   ],
+    ResponseLevel.internal_error:  [ '‼️', color_red    ],
     ResponseLevel.module_disabled: [ '🚫', color_red   ]
 }
 

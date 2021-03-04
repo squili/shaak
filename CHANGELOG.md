@@ -1,3 +1,6 @@
+### 1.4.4
+- Fixed error when reporting to a guild that has deleted their foreign channel
+
 ### 1.4.3
 - Fixed invalid regex patterns cause modules to not properly initialize
 

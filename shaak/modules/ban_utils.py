@@ -395,6 +395,9 @@ class BanUtils(BaseModule):
                                 if module_settings.foreign_log_channel:
 
                                     target_channel = self.bot.get_channel(module_settings.foreign_log_channel)
+                                    if target_channel == None:
+                                        # set channel not valid
+                                        continue
                                     new_message = await target_channel.send(
                                         embed=discord.Embed(
                                             color=discord.Color(0xFFFFFF),
