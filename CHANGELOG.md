@@ -1,4 +1,6 @@
 ### 1.4.5
+- New migrations
+- New docs
 - Added ban option to word watch
 
 ### 1.4.4

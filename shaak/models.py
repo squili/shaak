@@ -58,7 +58,7 @@ class WordWatchWatch(Model):
     match_type  = fields.IntField        ()
     auto_delete = fields.BooleanField    ()
     ignore_case = fields.BooleanField    ()
-    ban         = fields.IntField        ()
+    ban         = fields.IntField        (null=True)
 
 class WordWatchIgnore(Model):
     guild        = fields.ForeignKeyField ('models.Guild', related_name='word_watch_ignores')
