@@ -10,6 +10,7 @@ Each watch has settings dictating how the bot search messages and the action it 
 | del   | Boolean    | No       | Whether to delete any message that the bot matches
 | cased | Boolean    | No       | Whether to use case-sensitive matching. Not supported for the `word` type
 | ping  | Ping Group | Null     | Which ping group (if any) to ping once a match is found. See [Ping Groups](wordwatch.md#ping-groups) for more information
+| ban   | Integer    | Null     | Whether to ban the user. Supply a number for the days of message history to clear
 
 ### Ping Groups
 Ping groups are lists of roles and users to be pinged once a match is found in a message. Each server can have as many ping groups and pings in the groups as they'd like

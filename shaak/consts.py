@@ -18,6 +18,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 from dataclasses import dataclass
 from datetime    import timedelta
 from enum        import Enum
+from typing      import Union
 
 import discord
 from discord.ext     import commands
@@ -74,9 +75,22 @@ def str_to_match_type(stuff: str) -> MatchType:
         raise AttributeError(stuff)
     return getattr(MatchType, stuff)
 
+def ww_ban_parse(stuff: Union[str, bool]) -> int:
+    if stuff in [None, False]:
+        return None
+    if stuff == True:
+        return 0
+    num = int(stuff)
+    if num < 0:
+        return 0
+    if num > 7:
+        return 7
+    return num
+
 watch_setting_map = {
     'del': ensurebool,
     'cased': ensurebool,
     'type': str_to_match_type,
-    'ping': pass_value
+    'ping': pass_value,
+    'ban': ww_ban_parse
 }

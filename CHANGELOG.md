@@ -1,3 +1,6 @@
+### 1.4.5
+- Added ban option to word watch
+
 ### 1.4.4
 - Fixed error when reporting to a guild that has deleted their foreign channel
 

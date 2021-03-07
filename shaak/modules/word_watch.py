@@ -53,6 +53,7 @@ class WatchCacheEntry:
     auto_delete: bool
     match_type:  int
     pattern:     str
+    ban:         int
 
     def __hash__(self):
         return self.id
@@ -84,7 +85,8 @@ class WordWatch(BaseModule):
             ignore_case=watch.ignore_case,
             auto_delete=watch.auto_delete,
             match_type=watch.match_type,
-            pattern=watch.pattern
+            pattern=watch.pattern,
+            ban=watch.ban
         )
 
         try:
@@ -182,6 +184,7 @@ class WordWatch(BaseModule):
                         return
             
             delete_message = False
+            ban_time = None
             matches = set()
             processed_text = None
             text_lower = None
@@ -191,6 +194,10 @@ class WordWatch(BaseModule):
                     found = list(entry.compiled.finditer(message.content))
                     if found:
                         delete_message = delete_message or entry.auto_delete
+                        if entry.ban != None:
+                            if ban_time == None:
+                                ban_time = 0
+                            ban_time = max(ban_time, entry.ban)
                         watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
                         for match in found:
                             matches.add((
@@ -203,6 +210,10 @@ class WordWatch(BaseModule):
                     found = word_matches(processed_text, entry.compiled)
                     if found:
                         delete_message = delete_message or entry.auto_delete
+                        if entry.ban != None:
+                            if ban_time == None:
+                                ban_time = 0
+                            ban_time = max(ban_time, entry.ban)
                         watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
                         for match in found:
                             matches.add((
@@ -215,6 +226,10 @@ class WordWatch(BaseModule):
                     found = list(find_all_contains(text_lower if entry.ignore_case else message.content, entry.pattern))
                     if found:
                         delete_message = delete_message or entry.auto_delete
+                        if entry.ban != None:
+                            if ban_time == None:
+                                ban_time = 0
+                            ban_time = max(ban_time, entry.ban)
                         watch = await WordWatchWatch.filter(id=entry.id).prefetch_related('group').get()
                         for match in found:
                             matches.add((
@@ -226,6 +241,12 @@ class WordWatch(BaseModule):
                     await message.delete()
                 except discord.NotFound:
                     pass # the message may be deleted before we get to it; this shouldn't cause us to not log the message
+            
+            if ban_time != None:
+                try:
+                    await message.author.ban(delete_message_days=ban_time)
+                except discord.NotFound:
+                    pass # user could already be banned
 
             if matches:
                 try:
@@ -255,7 +276,7 @@ class WordWatch(BaseModule):
                 ranges = get_int_ranges(set(
                     (index                       for range_ in
                     (range(match[1], match[2]+1) for match  in matches)
-                                                for index  in range_)
+                                                 for index  in range_)
                 )) # p y t h o n i c
 
                 message_embed = discord.Embed(
@@ -376,7 +397,8 @@ class WordWatch(BaseModule):
             'del': False,
             'cased': False,
             'type': None,
-            'ping': None
+            'ping': None,
+            'ban': None
         }
         for setting in split_settings:
             if len(setting) == 0:
@@ -442,7 +464,8 @@ class WordWatch(BaseModule):
                     match_type=parsed_settings['type'].value,
                     group=group,
                     auto_delete=parsed_settings['del'],
-                    ignore_case=not parsed_settings['cased']
+                    ignore_case=not parsed_settings['cased'],
+                    ban=parsed_settings['ban']
                 )
                 await self.add_to_cache(added)
                 additions += 1
@@ -464,6 +487,9 @@ class WordWatch(BaseModule):
                     something_changed = True
                 if existing.ignore_case == parsed_settings['cased']:
                     existing.ignore_case = not parsed_settings['cased']
+                    something_changed = True
+                if existing.ban != parsed_settings['ban']:
+                    existing.ban = parsed_settings['ban']
                     something_changed = True
                 if something_changed:
                     await existing.save()
@@ -503,7 +529,8 @@ class WordWatch(BaseModule):
             name_extras = [i for i in (
                 'Autodelete' if watch.auto_delete else None,
                 None if watch.ignore_case else 'Cased',
-                None if watch.group == None else f'Pings `{watch.group.name}`'
+                None if watch.group == None else f'Pings `{watch.group.name}`',
+                f'Ban ({item.ban})' if item.ban != None else None
             ) if i != None]
             if name_extras:
                 field_name += ' - ' + ', '.join(name_extras)
