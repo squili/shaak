@@ -1,6 +1,6 @@
 {
   "upgrade": [
-    "ALTER TABLE \"wordwatchwatch\" ADD \"ban\" INT NOT NULL"
+    "ALTER TABLE \"wordwatchwatch\" ADD \"ban\" INT"
   ],
   "downgrade": [
     "ALTER TABLE \"wordwatchwatch\" DROP COLUMN \"ban\""
