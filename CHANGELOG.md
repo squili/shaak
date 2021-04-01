@@ -1,4 +1,8 @@
+### 1.4.7
+- Fixed action commands not properly checking permissions
+
 ### 1.4.6
+- Notice: prior to this release, mass action commands had permissions improperly configured
 - Mass action commands have been temporarily disabled
 
 ### 1.4.5

@@ -279,64 +279,67 @@ class Utils(commands.Cog):
             ])
         ))
     
-    # @commands.command('massban')
-    # @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check(), commands.guild_only())
-    # async def massban(self, ctx: commands.Context, *ids: int):
+    @commands.command('massban')
+    @commands.guild_only()
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def massban(self, ctx: commands.Context, *ids: int):
 
-    #     await ctx.message.add_reaction('🔄')
+        await ctx.message.add_reaction('🔄')
 
-    #     errors = []
-    #     for index, id in enumerate(ids):
-    #         try:
-    #             await ctx.guild.ban(discord.Object(id=id), reason=f'Massban by {ctx.author.id}')
-    #         except Exception as e:
-    #             errors.append(index+1)
+        errors = []
+        for index, id in enumerate(ids):
+            try:
+                await ctx.guild.ban(discord.Object(id=id), reason=f'Massban by {ctx.author.id}')
+            except Exception as e:
+                errors.append(index+1)
         
-    #     await ctx.message.remove_reaction('🔄', self.bot.user)
+        await ctx.message.remove_reaction('🔄', self.bot.user)
         
-    #     if len(errors) > 0:
-    #         await self.respond(ctx, ResponseLevel.general_error, f'Failed banning {commas(getrange_s(errors))}')
-    #     else:
-    #         await self.respond(ctx, ResponseLevel.success)
+        if len(errors) > 0:
+            await self.respond(ctx, ResponseLevel.general_error, f'Failed banning {commas(getrange_s(errors))}')
+        else:
+            await self.respond(ctx, ResponseLevel.success)
     
-    # @commands.command('massunban')
-    # @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check(), commands.guild_only())
-    # async def massunban(self, ctx: commands.Context, *ids: int):
+    @commands.command('massunban')
+    @commands.guild_only()
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def massunban(self, ctx: commands.Context, *ids: int):
 
-    #     await ctx.message.add_reaction('🔄')
+        await ctx.message.add_reaction('🔄')
 
-    #     errors = []
-    #     for index, id in enumerate(ids):
-    #         try:
-    #             await ctx.guild.unban(discord.Object(id=id), reason=f'Massban by {ctx.author.id}')
-    #         except Exception as e:
-    #             errors.append(index+1)
+        errors = []
+        for index, id in enumerate(ids):
+            try:
+                await ctx.guild.unban(discord.Object(id=id), reason=f'Massban by {ctx.author.id}')
+            except Exception as e:
+                errors.append(index+1)
         
-    #     await ctx.message.remove_reaction('🔄', self.bot.user)
+        await ctx.message.remove_reaction('🔄', self.bot.user)
         
-    #     if len(errors) > 0:
-    #         await self.respond(ctx, ResponseLevel.general_error, f'Failed unbanning {commas(getrange_s(errors))}')
-    #     else:
-    #         await self.respond(ctx, ResponseLevel.success)
+        if len(errors) > 0:
+            await self.respond(ctx, ResponseLevel.general_error, f'Failed unbanning {commas(getrange_s(errors))}')
+        else:
+            await self.respond(ctx, ResponseLevel.success)
     
-    # @commands.command('massrole')
-    # @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check(), commands.guild_only())
-    # async def massrole(self, ctx: commands.Context, role: commands.RoleConverter(), *members: commands.MemberConverter()):
+    @commands.command('massrole')
+    @commands.guild_only()
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def massrole(self, ctx: commands.Context, role: commands.RoleConverter(), *members: commands.MemberConverter()):
 
-    #     await ctx.message.add_reaction('🔄')
+        await ctx.message.add_reaction('🔄')
 
-    #     errors = []
-    #     for index, member in enumerate(members):
-    #         if role in member.roles:
-    #             continue
-    #         try:
-    #             await member.add_roles(role, reason=f'Massrole by {ctx.author.id}')
-    #         except Exception as e:
-    #             errors.append(index+1)
+        errors = []
+        for index, member in enumerate(members):
+            if role in member.roles:
+                continue
+            try:
+                await member.add_roles(role, reason=f'Massrole by {ctx.author.id}')
+            except Exception as e:
+                errors.append(index+1)
         
-    #     await ctx.message.remove_reaction('🔄', self.bot.user)
+        await ctx.message.remove_reaction('🔄', self.bot.user)
 
-    #     if len(errors) > 0:
-    #         await self.respond(ctx, ResponseLevel.general_error, f'Failed roling {commas(getrange_s(errors))}')
-    #     else:
-    #         await self.respond(ctx, ResponseLevel.success)
+        if len(errors) > 0:
+            await self.respond(ctx, ResponseLevel.general_error, f'Failed roling {commas(getrange_s(errors))}')
+        else:
+            await self.respond(ctx, ResponseLevel.success)
