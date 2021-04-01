@@ -1,3 +1,6 @@
+### 1.4.6
+- Mass action commands have been temporarily disabled
+
 ### 1.4.5
 - New migrations
 - New docs
