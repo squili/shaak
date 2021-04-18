@@ -1,3 +1,6 @@
+### 1.4.8
+- Added `begonecomments` command to purge media channels of unwanted cringe
+
 ### 1.4.7
 - Fixed action commands not properly checking permissions
 

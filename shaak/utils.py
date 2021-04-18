@@ -24,7 +24,7 @@ import traceback
 import random
 import sys
 from typing   import List, Optional, Union, Callable, TypeVar, Coroutine
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import discord
 from discord.ext import commands
@@ -343,3 +343,29 @@ class Utils(commands.Cog):
             await self.respond(ctx, ResponseLevel.general_error, f'Failed roling {commas(getrange_s(errors))}')
         else:
             await self.respond(ctx, ResponseLevel.success)
+
+    @commands.command('begonecomments')
+    @commands.guild_only()
+    @commands.check_any(commands.has_permissions(manage_messages=True), has_privlidged_role_check())
+    async def begone_comments(self, ctx: commands.Context):
+
+        await ctx.message.add_reaction('🔄')
+
+        bulk = []
+        single = set()
+        now = datetime.now()
+        async for message in ctx.channel.history():
+            if message.id == ctx.message.id:
+                continue
+            if len(message.attachments) == 0:
+                if now - message.created_at > timedelta(days=13, hours=12):
+                    single.add(message)
+                else:
+                    bulk.append(message)
+        
+        for i in chunks(bulk, 100):
+            await ctx.channel.delete_messages(i)
+        for i in single:
+            await i.delete()
+        
+        await ctx.message.delete()
