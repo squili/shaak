@@ -10,3 +10,4 @@ Welcome to the Shaak documentation!
 - [Previews](previews.md)
 - [Ban Utils](banutils.md)
 - [User Watch](userwatch.md)
+- [Hotline](hotline.md)
