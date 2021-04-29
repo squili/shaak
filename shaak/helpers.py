@@ -223,3 +223,24 @@ def get_or_create(d, k, t):
 
 def time_ms():
     return round(time.time() * 1000)
+
+def duration_parse(text: str) -> Optional[str]:
+    if len(text) < 2:
+        return None
+    unit = text[-1].lower()
+    if unit == 's':
+        multiplier = 1
+    elif unit == 'm':
+        multiplier = 60
+    elif unit == 'h':
+        multiplier = 60 * 60
+    elif unit == 'd':
+        multiplier = 60 * 60 * 24
+    elif unit == 'w':
+        multiplier = 60 * 60 * 24 * 7
+    else:
+        return None
+    try:
+        return int(text[:-1]) * multiplier
+    except ValueError:
+        return None

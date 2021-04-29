@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "CREATE TABLE IF NOT EXISTS \"hotlinesettings\" (\n    \"id\" SERIAL NOT NULL PRIMARY KEY,\n    \"enabled\" BOOL NOT NULL  DEFAULT False,\n    \"mute_role\" BIGINT,\n    \"guild_id\" BIGINT NOT NULL REFERENCES \"guild\" (\"id\") ON DELETE CASCADE\n);"
+  ],
+  "downgrade": [
+    "DROP TABLE IF EXISTS \"hotlinesettings\""
+  ]
+}

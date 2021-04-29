@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "CREATE TABLE IF NOT EXISTS \"hotlinetemplate\" (\n    \"id\" SERIAL NOT NULL PRIMARY KEY,\n    \"name\" TEXT NOT NULL,\n    \"text\" TEXT NOT NULL,\n    \"guild_id\" BIGINT NOT NULL REFERENCES \"guild\" (\"id\") ON DELETE CASCADE\n);"
+  ],
+  "downgrade": [
+    "DROP TABLE IF EXISTS \"hotlinetemplate\""
+  ]
+}

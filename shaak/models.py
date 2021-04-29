@@ -120,4 +120,13 @@ class UserWatchSettings(Model, ModuleSettingsMixin):
 
 class UserWatchWatch(Model):
     guild   = fields.ForeignKeyField ('models.Guild', related_name='user_watch_watch')
-    user_id = fields.BigIntField()
+    user_id = fields.BigIntField     ()
+
+class HotlineSettings(Model, ModuleSettingsMixin):
+    guild     = fields.ForeignKeyField ('models.Guild', related_name='hotline_settings')
+    mute_role = fields.BigIntField     (null=True)
+
+class HotlineTemplate(Model):
+    guild = fields.ForeignKeyField ('models.Guild', related_name='hotline_templates')
+    name  = fields.TextField       ()
+    text  = fields.TextField       ()

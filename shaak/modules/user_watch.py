@@ -70,6 +70,9 @@ class UserWatch(BaseModule):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
 
+        if message.guild == None:
+            return
+
         if self.is_user_watched(message.guild.id, message.author.id):
 
             module_settings = None

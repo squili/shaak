@@ -1,3 +1,8 @@
+### 1.4.9
+- New migrations
+- New docs
+- Added `hotline` module
+
 ### 1.4.8
 - Added `begonecomments` command to purge media channels of unwanted cringe
 
