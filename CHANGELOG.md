@@ -1,4 +1,4 @@
-### 1.4.9
+### 1.5.0
 - New migrations
 - New docs
 - Added `hotline` module
