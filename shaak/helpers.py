@@ -15,8 +15,6 @@ You should have received a copy of the GNU Affero General Public License
 along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-# pylint: disable=unsubscriptable-object   # pylint/issues/3882
-
 import asyncio
 import time
 import logging
