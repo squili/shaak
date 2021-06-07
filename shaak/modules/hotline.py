@@ -65,10 +65,10 @@ class Hotline(BaseModule):
 
         template = await HotlineTemplate.filter(name=name, guild_id=ctx.guild.id).get_or_none()
         if template == None:
-            await HotlineTemplate.create(name=name, text=' '.join(text), guild_id=ctx.guild.id)
+            await HotlineTemplate.create(name=name, text=text, guild_id=ctx.guild.id)
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
-            template.text = ' '.join(text)
+            template.text = text
             await template.save()
             await self.utils.respond(ctx, ResponseLevel.success)
 
