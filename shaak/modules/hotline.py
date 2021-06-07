@@ -46,7 +46,7 @@ class Hotline(BaseModule):
             else:
                 await self.utils.respond(ctx, ResponseLevel.success, id2mention(module_settings.mute_role, MentionType.role))
         else:
-            role = awaitcommands.RoleConverter.convert(ctx, role_raw)
+            role = await commands.RoleConverter.convert(ctx, role_raw)
             if role == None:
                 if role_raw in ['clear', 'unset', 'disable']:
                     await HotlineSettings.filter(guild_id=ctx.guild.id).update(mute_role=None)
