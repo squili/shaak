@@ -92,7 +92,7 @@ class Hotline(BaseModule):
             await self.utils.list_items(ctx, names)
 
     @commands.command('hl.lecture')
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    @commands.check_any(commands.has_permissions(manage_roles=True), has_privlidged_role_check())
     async def hl_bonk(self, ctx: commands.Context, target: discord.Member, text: str, length: Optional[str]):
 
         pattern = await HotlineTemplate.filter(name=text, guild_id=ctx.guild.id).get_or_none()
