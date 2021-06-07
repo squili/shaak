@@ -1,3 +1,6 @@
+### 1.5.1
+- Fixed `hl.role` errors
+
 ### 1.5.0
 - New migrations
 - New docs

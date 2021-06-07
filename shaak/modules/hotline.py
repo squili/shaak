@@ -28,6 +28,8 @@ from shaak.consts      import ResponseLevel, ModuleInfo, MentionType
 from shaak.checks      import has_privlidged_role_check
 from shaak.helpers     import id2mention, duration_parse
 
+RoleConverter = commands.RoleConverter()
+
 class Hotline(BaseModule):
     
     meta = ModuleInfo(
@@ -46,7 +48,7 @@ class Hotline(BaseModule):
             else:
                 await self.utils.respond(ctx, ResponseLevel.success, id2mention(module_settings.mute_role, MentionType.role))
         else:
-            role = await commands.RoleConverter.convert(ctx, role_raw)
+            role = await RoleConverter.convert(ctx, role_raw)
             if role == None:
                 if role_raw in ['clear', 'unset', 'disable']:
                     await HotlineSettings.filter(guild_id=ctx.guild.id).update(mute_role=None)
