@@ -108,7 +108,7 @@ class Previews(BaseModule):
                 for match in matches:
                     await self.send_message_preview(log_channel or message.channel, match, message.author, message.guild)
         except Exception as e:
-            await self.utils.log_background_error(item.guild, e)
+            await self.utils.log_background_error(message.guild, e)
     
     @commands.command('pv.view')
     async def pv_view(self, ctx: commands.Context, link: str):
