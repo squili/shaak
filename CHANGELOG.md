@@ -1,3 +1,7 @@
+### 1.5.2
+- Fixed preview background errors
+- Escaped background error backtraces
+
 ### 1.5.1
 - Fixed `hl.role` errors
 - Fixed `hl.add` adding spaces everywhere

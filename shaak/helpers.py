@@ -244,3 +244,6 @@ def duration_parse(text: str) -> Optional[str]:
         return int(text[:-1]) * multiplier
     except ValueError:
         return None
+
+def escape_formatting(text: str) -> str:
+    return text.replace('*', '\\*').replace('_', '\\_').replace('~~', '\\~~')

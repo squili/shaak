@@ -29,7 +29,7 @@ from discord.ext import commands
 
 from shaak.consts      import ResponseLevel, response_map, color_green, MentionType
 from shaak.models      import GuildSettings, GlobalSettings
-from shaak.helpers     import chunks, platform_info, commas, getrange_s
+from shaak.helpers     import chunks, platform_info, commas, getrange_s, escape_formatting
 from shaak.settings    import product_settings
 from shaak.extra_types import GeneralChannel
 from shaak.checks      import has_privlidged_role_check
@@ -212,7 +212,7 @@ class Utils(commands.Cog):
         traceback.print_exception(info[0], info[1], info[2], file=buff)
         buff.seek(0)
         embed = discord.Embed(
-            description=buff.read()
+            description=escape_formatting(buff.read())
         )
         embed.set_footer(text='Error report')
         await log_channel.send(embed=embed)
