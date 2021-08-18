@@ -904,7 +904,10 @@ class WordWatch(BaseModule):
                 await self.utils.respond(ctx, ResponseLevel.general_error, "You're not in the target guild")
                 return
             
-            if not member.guild_permissions.administrator():
+            for i in member.roles:
+                if i.permissions.administrator():
+                    break
+            else:
                 await self.utils.respond(ctx, ResponseLevel.general_error, 'You need `Administrator` in the target guild')
                 return
 
