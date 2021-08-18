@@ -1,3 +1,6 @@
+### 1.5.3
+- Added `ww.transfer` command (undocumented)
+
 ### 1.5.2
 - Fixed preview background errors
 - Escaped background error backtraces

@@ -17,6 +17,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 
 import time
 import logging
+import io
 import string
 import re
 from dataclasses import dataclass
@@ -886,3 +887,68 @@ class WordWatch(BaseModule):
     async def debug_queue_size(self, ctx: commands.Context):
 
         await self.utils.respond(ctx, ResponseLevel.success, str(self.scan_queue._queue.qsize()))
+
+    @commands.command(name='ww.transfer')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def ww_transfer(self, ctx: commands.Context, from_group: str, to_group: str, target_server_id: int):
+        
+        target = self.bot.get_guild(target_server_id)
+        if target is None:
+            await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not found')
+            return
+        
+        if target.owner_id != ctx.author.id:
+            try:
+                member = await target.fetch_member(ctx.author.id)
+            except discord.errors.NotFound as e:
+                await self.utils.respond(ctx, ResponseLevel.general_error, "You're not in the target guild")
+                return
+            
+            if member.guild_permissions.administrator != False:
+                await self.utils.respond(ctx, ResponseLevel.general_error, 'You need `Administrator` in the target guild')
+                return
+
+        try:
+            source: WordWatchPingGroup = await WordWatchPingGroup.get(guild_id=ctx.guild.id, name=from_group)
+        except DoesNotExist:
+            await self.utils.respond(ctx, ResponseLevel.general_error, f'Group `{from_group}` not found')
+            return
+
+        try:
+            dest: WordWatchPingGroup = await WordWatchPingGroup.get(guild_id=target_server_id, name=to_group)
+        except DoesNotExist:
+            await self.utils.respond(ctx, ResponseLevel.general_error, f'Group `{to_group}` not found')
+            return
+
+        await ctx.message.add_reaction('🔄')
+
+        target_guild = await Guild.get(id=target_server_id)
+
+        for watch in await WordWatchWatch.filter(group_id=source.pk).all():
+            try:
+                existing: WordWatchWatch = await WordWatchWatch.get(
+                    guild_id=target_server_id,
+                    pattern=watch.pattern
+                ).prefetch_related('guild', 'group')
+                await existing.delete()
+                for i in self.watch_cache[target_server_id]:
+                    if i.id == existing.id:
+                        self.watch_cache[target_server_id].remove(i)
+                        break
+                else:
+                    print('???')
+            except DoesNotExist:
+                pass
+            added = await WordWatchWatch.create(
+                guild=target_guild,
+                pattern=watch.pattern,
+                match_type=watch.match_type,
+                group=dest,
+                auto_delete=watch.auto_delete,
+                ignore_case=watch.ignore_case,
+                ban=watch.ban
+            )
+            await self.add_to_cache(added)
+
+        await ctx.message.remove_reaction('🔄', self.bot.user)
+        await self.utils.respond(ctx, ResponseLevel.success)
