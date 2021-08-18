@@ -1,3 +1,6 @@
+### 1.5.4
+- Renamed `ww.transfer` to `debug.transfer` to reflect it becoming a debug command
+
 ### 1.5.3
 - Added `ww.transfer` command (undocumented)
 

@@ -888,28 +888,14 @@ class WordWatch(BaseModule):
 
         await self.utils.respond(ctx, ResponseLevel.success, str(self.scan_queue._queue.qsize()))
 
-    @commands.command(name='ww.transfer')
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def ww_transfer(self, ctx: commands.Context, from_group: str, to_group: str, target_server_id: int):
+    @commands.command(name='debug.transfer')
+    @is_owner_check()
+    async def debug_transfer(self, ctx: commands.Context, from_group: str, to_group: str, target_server_id: int):
         
         target = self.bot.get_guild(target_server_id)
         if target is None:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not found')
             return
-        
-        if target.owner_id != ctx.author.id:
-            try:
-                member = await target.fetch_member(ctx.author.id)
-            except discord.errors.NotFound as e:
-                await self.utils.respond(ctx, ResponseLevel.general_error, "You're not in the target guild")
-                return
-            
-            for i in member.roles:
-                if i.permissions.administrator():
-                    break
-            else:
-                await self.utils.respond(ctx, ResponseLevel.general_error, 'You need `Administrator` in the target guild')
-                return
 
         try:
             source: WordWatchPingGroup = await WordWatchPingGroup.get(guild_id=ctx.guild.id, name=from_group)
