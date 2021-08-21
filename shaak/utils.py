@@ -290,7 +290,7 @@ class Utils(commands.Cog):
                 await ctx.guild.ban(discord.Object(id=id), reason=f'Massban by {ctx.author.id}')
             except Exception as e:
                 # this bug makes no sense
-                if guild.id == 740822668743278675:
+                if ctx.guild.id == 740822668743278675:
                     raise e
                 errors.append(index+1)
         
