@@ -525,7 +525,15 @@ class WordWatch(BaseModule):
         embed.set_footer(text=f'{page_number+1}/{page_max}')
         for index, item in items:
             watch: WordWatchWatch = await WordWatchWatch.filter(id=item.id).prefetch_related('group').get()
-            field_name = f'`{index+1}`: {"word" if watch.match_type == MatchType.word.value else "contains"}'
+            field_name = f'`{index+1}`: '
+            if watch.match_type == MatchType.word.value:
+                field_name += 'word'
+            elif watch.match_type == MatchType.contains.value:
+                field_name += 'contains'
+            elif watch.match_type == MatchType.regex.value:
+                field_name += 'regex'
+            else:
+                field_name += 'unknown'
             name_extras = [i for i in (
                 'Autodelete' if watch.auto_delete else None,
                 None if watch.ignore_case else 'Cased',
