@@ -694,7 +694,7 @@ class WordWatch(BaseModule):
         for index, reference in enumerate(references):
             id = mention2id(reference)
             try:
-                target_ignore = await WordWatchIgnore.get(target_id=id)
+                target_ignore = await WordWatchIgnore.get(target_id=id, guild_id=ctx.guild.id)
             except DoesNotExist:
                 errors.append(index+1)
             else:

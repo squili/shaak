@@ -1,3 +1,6 @@
+### 1.5.7
+- Fixed `ww.unignore` not filtering by guild
+
 ### 1.5.6
 - Increased guild data clearing grace period
 
