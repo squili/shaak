@@ -158,6 +158,10 @@ class WordWatch(BaseModule):
             
             if message.author.bot:
                 return
+
+            # TODO: uncomment after grace period
+            # if message.guild.id not in self.utils.whitelist_cache or not self.utils.whitelist_cache[message.guild.id]:
+            #     return
             
             if message.guild.id not in self.ignore_cache:
                 return

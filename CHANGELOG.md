@@ -1,3 +1,6 @@
+### 1.6.0
+- Added initial whitelisting support
+
 ### 1.5.7
 - Fixed `ww.unignore` not filtering by guild
 

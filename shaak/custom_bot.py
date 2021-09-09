@@ -21,7 +21,7 @@ import discord
 from discord.ext         import commands
 from tortoise.exceptions import DoesNotExist
 
-from shaak.errors   import ModuleDisabled, NotAllowed, InvalidId
+from shaak.errors   import ModuleDisabled, NotAllowed, InvalidId, NotWhitelisted
 from shaak.consts   import ResponseLevel
 from shaak.models   import GuildSettings, GlobalSettings
 from shaak.settings import product_settings
@@ -56,6 +56,8 @@ class CustomBot(commands.Bot):
             return
         elif isinstance(error, (commands.MissingPermissions, NotAllowed)):
             await self.utils.respond(ctx, ResponseLevel.forbidden, 'You do not have permission to run this command')
+        elif isinstance(error, NotWhitelisted):
+            await self.utils.respond(ctx, ResponseLevel.forbidden, 'This guild is not whitelisted. Please contact <@719046554744520754> if you believe this is a mistake.')
         elif isinstance(error, discord.HTTPException) and error.code == 10008:
             await self.utils.respond(ctx, ResponseLevel.internal_error, f'HTTP error code {error.code}')
         elif isinstance(error, (commands.CommandError, InvalidId)):

@@ -27,8 +27,9 @@ class GlobalSettings(Model):
     default_verbosity = fields.BooleanField  ()
 
 class Guild(Model):
-    id = fields.BigIntField          (pk=True, generated=False)
-    delete_at = fields.DatetimeField (null=True)
+    id          = fields.BigIntField   (pk=True, generated=False)
+    delete_at   = fields.DatetimeField (null=True)
+    whitelisted = fields.BooleanField  (default=False)
 
 class GuildSettings(Model):
     guild         = fields.ForeignKeyField ('models.Guild', related_name='guild_settings')
