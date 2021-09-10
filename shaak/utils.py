@@ -21,18 +21,18 @@ import time
 import traceback
 import random
 import sys
-from typing   import List, Optional, Union, Callable, TypeVar, Coroutine, Dict
+from typing   import List, Optional, Union, Callable, TypeVar, Coroutine
 from datetime import datetime, timedelta
 
 import discord
 from discord.ext import commands
 
 from shaak.consts      import ResponseLevel, response_map, color_green, MentionType
-from shaak.models      import GuildSettings, GlobalSettings, Guild
+from shaak.models      import GuildSettings, GlobalSettings
 from shaak.helpers     import chunks, platform_info, commas, getrange_s, escape_formatting
 from shaak.settings    import product_settings
 from shaak.extra_types import GeneralChannel
-from shaak.checks      import has_privlidged_role_check, is_owner_check
+from shaak.checks      import has_privlidged_role_check
 
 _T = TypeVar('T')
 
@@ -40,12 +40,6 @@ class Utils(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.whitelist_cache: Dict[int, bool] = {}
-    
-    async def initialize(self):
-        guilds = await Guild.all()
-        for i in guilds:
-            self.whitelist_cache[i.id] = i.whitelisted
     
     async def respond(self, ctx_or_message: Union[commands.Context, discord.Message], response_level: ResponseLevel, response: Optional[str] = None):
 
@@ -376,30 +370,3 @@ class Utils(commands.Cog):
             await i.delete()
         
         await ctx.message.delete()
-
-    @commands.command('whitelist.add')
-    @commands.guild_only()
-    @is_owner_check()
-    async def whitelist_add(self, ctx: commands.Context):
-
-        await Guild.filter(id=ctx.guild.id).update(whitelisted=True)
-        self.whitelist_cache[ctx.guild.id] = True
-        await self.respond(ctx, ResponseLevel.success)
-
-    @commands.command('whitelist.remove')
-    @commands.guild_only()
-    @is_owner_check()
-    async def whitelist_remove(self, ctx: commands.Context):
-
-        await Guild.filter(id=ctx.guild.id).update(whitelisted=False)
-        self.whitelist_cache[ctx.guild.id] = False
-        await self.respond(ctx, ResponseLevel.success)
-
-    @commands.command('whitelist.set')
-    @commands.dm_only()
-    @is_owner_check()
-    async def whitelist_set(self, ctx: commands.Context, guild_id: int, to: bool):
-
-        await Guild.filter(id=guild_id).update(whitelisted=to)
-        self.whitelist_cache[guild_id] = to
-        await self.respond(ctx, ResponseLevel.success, 'Set')

@@ -21,7 +21,7 @@ from discord.ext import commands
 
 from shaak.consts     import ModuleInfo, ResponseLevel
 from shaak.custom_bot import CustomBot
-from shaak.errors     import ModuleDisabled, NotWhitelisted
+from shaak.errors     import ModuleDisabled
 
 class BaseModule(commands.Cog):
     
@@ -54,10 +54,6 @@ class BaseModule(commands.Cog):
 
         await self.bot.manager_ready.wait()
         await self.initialized.wait()
-
-        # TODO: uncomment after grace period
-        # if not self.utils.whitelist_cache[ctx.guild.id]:
-        #     raise NotWhitelisted()
 
         module_settings = await self.meta.settings.get(guild_id=ctx.guild.id)
         if module_settings.enabled:

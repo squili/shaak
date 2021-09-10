@@ -78,9 +78,7 @@ async def start_bot():
     
     # add cogs
     logger.info('Loading cogs')
-    utils = Utils(bot)
-    await utils.initialize()
-    bot.add_cog(utils)
+    bot.add_cog(Utils(bot))
     bot.add_cog(Debug(bot))
     manager = Manager(bot)
     bot.add_cog(manager)
