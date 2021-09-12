@@ -295,7 +295,6 @@ class WordWatch(BaseModule):
                 message_embed.add_field(name='User', value=id2mention(message.author.id, MentionType.user), inline=True)
                 message_embed.add_field(name='Channel', value=id2mention(message.channel.id, MentionType.channel), inline=True)
                 message_embed.add_field(name='Deleted', value=bool2str(delete_message, 'Yes', 'No'), inline=True)
-                message_embed.add_field(name='When', value=message.created_at.strftime("%d/%m/%y \u200B \u200B %I:%M:%S %p"), inline=True)
                 message_embed.add_field(name='Pattern' + pluralize("", "s", len(pattern_list_code)),
                                         value=pattern_list_code, inline=False)
 

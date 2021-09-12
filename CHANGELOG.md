@@ -1,3 +1,7 @@
+### 1.6.0
+- Removed guild id from messages previews
+- Removed when field from word watch logs
+
 ### 1.5.7
 - Fixed `ww.unignore` not filtering by guild
 

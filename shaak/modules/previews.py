@@ -76,7 +76,7 @@ class Previews(BaseModule):
         embed.add_field(name='Channel', value=id2mention(channel_id, MentionType.channel))
         embed.add_field(name='Author', value=id2mention(message.author.id, MentionType.user))
         if source_guild.id != guild.id:
-            embed.add_field(name='Guild', value=f'{guild.name} ({guild.id})')
+            embed.add_field(name='Guild', value=f'{guild.name}')
 
         await target_channel.send(embed=embed)
         if len(message.embeds) > 0:
