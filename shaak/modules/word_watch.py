@@ -136,6 +136,10 @@ class WordWatch(BaseModule):
         if guild.id not in self.watch_cache:
             self.watch_cache[guild.id] = []
             self.ignore_cache[guild.id] = set()
+        
+        for thread in guild.threads:
+            if not thread.me:
+                await thread.join()
     
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
@@ -382,6 +386,13 @@ class WordWatch(BaseModule):
 
         if old.content != new.content:
             await self.scan_queue.put(new)
+    
+    @commands.Cog.listener()
+    async def on_thread_join(self, thread: discord.Thread):
+
+        # if we're not in the thread
+        if thread.me is None:
+            await thread.join()
 
     @commands.command(name='ww.watch')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())

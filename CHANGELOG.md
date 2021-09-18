@@ -1,3 +1,6 @@
+### 2.0.1
+- Automatically join new threads
+
 ### 2.0.0
 - Switched to PyCord master
 - Disabled voice states and prescences intents
