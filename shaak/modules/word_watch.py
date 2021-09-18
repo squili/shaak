@@ -293,7 +293,7 @@ class WordWatch(BaseModule):
                 )
                 message_embed.set_author(
                     name=f'{message.author.name}#{message.author.discriminator} triggered {pattern_list} in #{message.channel.name}',
-                    icon_url=message.author.avatar_url
+                    icon_url=message.author.display_avatar.url
                 )
                 message_embed.set_footer(text=f'User ID: {message.author.id}', icon_url=message.guild.icon_url)
                 message_embed.add_field(name='User', value=id2mention(message.author.id, MentionType.user), inline=True)
@@ -333,7 +333,7 @@ class WordWatch(BaseModule):
                         )
                         fallback_embed.set_author(
                             name=f'{message.author.name}#{message.author.discriminator} triggered Word Watch in #{message.channel.name}',
-                            icon_url=message.author.avatar_url
+                            icon_url=message.author.display_avatar.url
                         )
                         fallback_embed.set_footer(text=f'Fallback embed • Ping {product_settings.author_name}!')
                         await log_channel.send(content=content, embed=fallback_embed)

@@ -78,21 +78,21 @@ class BanUtils(BaseModule):
             return
         icon_url = None
 
-        target_user = await self.utils.aggressive_resolve_user(ban_event.target_id)
+        target_user: Optional[discord.User] = await self.utils.aggressive_resolve_user(ban_event.target_id)
         if target_user == None:
             title = f'{ban_event.target_id} banned'
         else:
-            icon_url = target_user.avatar_url
+            icon_url = target_user.avatar.url
             title = f'{target_user.name}#{target_user.discriminator} ({ban_event.target_id}) banned'
 
         if ban_event.banner_id != None:
-            banner_user = await self.utils.aggressive_resolve_user(ban_event.banner_id)
+            banner_user: Optional[discord.User] = await self.utils.aggressive_resolve_user(ban_event.banner_id)
             if banner_user == None:
                 title += f' by {ban_event.banner_id}'
             else:
                 title += f' by {banner_user.name}#{banner_user.discriminator}'
                 if icon_url == None:
-                    icon_url = banner_user.avatar_url
+                    icon_url = banner_user.avatar.url
 
         if icon_url == None:
             icon_url = guild.icon_url
@@ -133,22 +133,22 @@ class BanUtils(BaseModule):
             return
 
         icon_url = source_guild.icon_url
-        target_user = await self.utils.aggressive_resolve_user(crossban_event.event.target_id)
+        target_user: discord.User = await self.utils.aggressive_resolve_user(crossban_event.event.target_id)
         if target_user == None:
             title = f'{crossban_event.event.target_id} banned in {source_guild.name}'
         else:
             title = f'{target_user.name}#{target_user.discriminator} ({crossban_event.event.target_id}) banned in {source_guild.name}'
             if icon_url == None:
-                icon_url = target_user.avatar_url
+                icon_url = target_user.avatar.url
 
         if crossban_event.event.banner_id != None:
-            banner_user = await self.utils.aggressive_resolve_user(crossban_event.event.banner_id)
+            banner_user: Optional[discord.User] = await self.utils.aggressive_resolve_user(crossban_event.event.banner_id)
             if banner_user == None:
                 title += f' by {crossban_event.event.banner_id}'
             else:
                 title += f' by {banner_user.name}#{banner_user.discriminator}'
                 if icon_url == None:
-                    icon_url = banner_user.avatar_url
+                    icon_url = banner_user.avatar.url
 
         if crossban_event.id == None:
             description_entries = [

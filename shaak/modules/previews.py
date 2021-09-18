@@ -71,7 +71,7 @@ class Previews(BaseModule):
         )
         embed.set_author(
             name=message.author.name + '#' + message.author.discriminator,
-            icon_url=message.author.avatar_url
+            icon_url=message.author.display_avatar.url
         )
         embed.add_field(name='Channel', value=id2mention(channel_id, MentionType.channel))
         embed.add_field(name='Author', value=id2mention(message.author.id, MentionType.user))

@@ -1,3 +1,6 @@
+### 2.0.2
+- Fixed profile url references
+
 ### 2.0.1
 - Automatically join new threads
 
