@@ -1,3 +1,10 @@
+### 2.0.0
+- Switched to PyCord master
+- Disabled voice states and prescences intents
+- Fixed member cache flags
+- Fixed ping datetime math
+- Removed `begonecomments`
+
 ### 1.6.0
 - Removed guild id from messages previews
 - Removed when field from word watch logs

@@ -1,5 +1,4 @@
-# we need intents to connect to current discord api
-discord.py>=1.5
+git+https://github.com/Pycord-Development/pycord.git
 # older versions of tortoise contain an injection vulnerability that we don't want
 tortoise-orm[asyncpg]>=0.16.6
 python-rapidjson

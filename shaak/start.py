@@ -59,12 +59,9 @@ async def start_bot():
     intents.messages = True
     intents.reactions = True
     intents.bans = True
-    intents.voice_states = True
     intents.members = True
-    intents.presences = True
     member_cache_flags = discord.MemberCacheFlags(
-        online=True,
-        voice=True,
+        voice=False,
         joined=True
     )
 
