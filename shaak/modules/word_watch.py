@@ -295,7 +295,10 @@ class WordWatch(BaseModule):
                     name=f'{message.author.name}#{message.author.discriminator} triggered {pattern_list} in #{message.channel.name}',
                     icon_url=message.author.display_avatar.url
                 )
-                message_embed.set_footer(text=f'User ID: {message.author.id}', icon_url=message.guild.icon_url)
+                if message.guild.icon:
+                    message_embed.set_footer(text=f'User ID: {message.author.id}', icon_url=message.guild.icon_url)
+                else:
+                    message_embed.set_footer(text=f'User ID: {message.author.id}')
                 message_embed.add_field(name='User', value=id2mention(message.author.id, MentionType.user), inline=True)
                 message_embed.add_field(name='Channel', value=id2mention(message.channel.id, MentionType.channel), inline=True)
                 message_embed.add_field(name='Deleted', value=bool2str(delete_message, 'Yes', 'No'), inline=True)

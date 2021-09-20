@@ -1,3 +1,6 @@
+### 2.0.3
+- Fixed guild icon url references
+
 ### 2.0.2
 - Fixed profile url references
 
