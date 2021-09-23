@@ -296,7 +296,7 @@ class WordWatch(BaseModule):
                     icon_url=message.author.display_avatar.url
                 )
                 if message.guild.icon:
-                    message_embed.set_footer(text=f'User ID: {message.author.id}', icon_url=message.guild.icon_url)
+                    message_embed.set_footer(text=f'User ID: {message.author.id}', icon_url=message.guild.icon.url)
                 else:
                     message_embed.set_footer(text=f'User ID: {message.author.id}')
                 message_embed.add_field(name='User', value=id2mention(message.author.id, MentionType.user), inline=True)
