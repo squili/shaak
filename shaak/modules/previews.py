@@ -58,7 +58,9 @@ class Previews(BaseModule):
 
         channel = guild.get_channel(channel_id)
         if channel == None:
-            return 4
+            channel = guild.get_thread(channel)
+            if channel == None:
+                return 4
         
         try:
             message = await channel.fetch_message(message_id)
