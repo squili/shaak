@@ -1,6 +1,3 @@
-### 2.0.3
-- Added thread support to message previews
-
 ### 2.0.2
 - Fixed profile url references
 
