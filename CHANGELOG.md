@@ -1,3 +1,6 @@
+### 2.0.4
+- Fixed thread support for message previews
+
 ### 2.0.3
 - Fixed guild icon url references
 
