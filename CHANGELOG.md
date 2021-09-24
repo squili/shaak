@@ -1,3 +1,6 @@
+### 2.0.6
+- Fixed reference to potentially null avatar asset
+
 ### 2.0.5
 - Actually fixed guild icon url references
 

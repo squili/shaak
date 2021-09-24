@@ -82,7 +82,7 @@ class BanUtils(BaseModule):
         if target_user == None:
             title = f'{ban_event.target_id} banned'
         else:
-            icon_url = target_user.avatar.url
+            icon_url = target_user.display_avatar.url
             title = f'{target_user.name}#{target_user.discriminator} ({ban_event.target_id}) banned'
 
         if ban_event.banner_id != None:
