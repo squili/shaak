@@ -12,7 +12,7 @@ theme:
     - navigation.instant
 markdown_extensions:
   - def_list
-repo_url: https://git.squi.live/squili/shaak
+repo_url: https://github.com/squili/shaak
 repo_name: squili/shaak
 nav:
   - Home: index.md
