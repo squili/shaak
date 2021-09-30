@@ -1,3 +1,6 @@
+### 2.0.7
+- Fixed ban utils reactions in threads
+
 ### 2.0.6
 - Fixed reference to potentially null avatar asset
 
