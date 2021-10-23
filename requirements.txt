@@ -5,3 +5,5 @@ python-rapidjson
 ciso8601
 # new version of aerich doesn't work that well
 aerich==0.3.3
+psutil
+humanize

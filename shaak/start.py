@@ -36,8 +36,9 @@ from shaak.modules.ban_utils  import BanUtils
 from shaak.modules.user_watch import UserWatch
 from shaak.modules.hotline    import Hotline
 
-from shaak.tasks.guild_cleanup    import GuildCleanupTask
-from shaak.tasks.bu_event_cleanup import BUEventCleanupTask
+from shaak.tasks.guild_cleanup       import GuildCleanupTask
+from shaak.tasks.bu_event_cleanup    import BUEventCleanupTask
+from shaak.tasks.performance_metrics import PerformanceMetrics
 
 logger = logging.getLogger('shaak_start')
 
@@ -94,6 +95,7 @@ async def start_bot():
     logger.info('Loading tasks')
     conductor.load_task(GuildCleanupTask)
     conductor.load_task(BUEventCleanupTask)
+    conductor.load_task(PerformanceMetrics)
 
     # start bot
     loop = asyncio.get_running_loop()

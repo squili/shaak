@@ -35,7 +35,7 @@ from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
                                get_int_ranges, getrange_s, id2mention,
                                link_to_message, mention2id, pluralize,
                                resolve_mention, possesivize, str2bool,
-                               DiscardingQueue)
+                               DiscardingQueue, RollingStats)
 from shaak.matcher  import pattern_preprocess, text_preprocess, word_matches, find_all_contains
 from shaak.models   import (WordWatchSettings, WordWatchPingGroup, WordWatchPing,
                             WordWatchWatch, WordWatchIgnore, Guild)
@@ -71,6 +71,8 @@ class WordWatch(BaseModule):
 
         self.watch_cache:  Dict[int, List[WatchCacheEntry]] = {}
         self.ignore_cache: Dict[int, Set[int]] = {}
+        self.scans = RollingStats()
+        self.hits = RollingStats()
         self.scan_queue = DiscardingQueue(0x400)
         self.bot.add_on_error_hooks(self.after_invoke_hook)
     
@@ -194,6 +196,8 @@ class WordWatch(BaseModule):
             text_lower = None
             for entry in self.watch_cache[message.guild.id]:
 
+                self.scans.record()
+
                 if entry.match_type == MatchType.regex.value:
                     found = list(entry.compiled.finditer(message.content))
                     if found:
@@ -253,6 +257,8 @@ class WordWatch(BaseModule):
                     pass # user could already be banned
 
             if matches:
+                self.hits.record()
+
                 try:
                     module_settings: WordWatchSettings = await WordWatchSettings.get(guild_id=message.guild.id)
                 except DoesNotExist:

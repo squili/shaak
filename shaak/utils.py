@@ -25,11 +25,13 @@ from typing   import List, Optional, Union, Callable, TypeVar, Coroutine
 from datetime import datetime, timedelta
 
 import discord
+import psutil
+import humanize
 from discord.ext import commands
 
-from shaak.consts      import ResponseLevel, response_map, color_green, MentionType
+from shaak.consts      import ResponseLevel, response_map, color_green, MentionType, cpu_usage_stat, mem_usage_stat
 from shaak.models      import GuildSettings, GlobalSettings
-from shaak.helpers     import chunks, platform_info, commas, getrange_s, escape_formatting
+from shaak.helpers     import chunks, platform_info, commas, getrange_s, escape_formatting, RollingStats
 from shaak.settings    import product_settings
 from shaak.extra_types import GeneralChannel
 from shaak.checks      import has_privlidged_role_check
@@ -40,6 +42,7 @@ class Utils(commands.Cog):
     
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.messages = RollingStats()
     
     async def respond(self, ctx_or_message: Union[commands.Context, discord.Message], response_level: ResponseLevel, response: Optional[str] = None):
 
@@ -344,3 +347,25 @@ class Utils(commands.Cog):
             await self.respond(ctx, ResponseLevel.general_error, f'Failed roling {commas(getrange_s(errors))}')
         else:
             await self.respond(ctx, ResponseLevel.success)
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+
+        self.messages.record()
+
+    @commands.command('stats')
+    async def message_stats(self, ctx: commands.Context):
+
+        word_watch = self.bot.get_cog('WordWatch')
+        cpu_avg = cpu_usage_stat.average()
+        mem_avg = mem_usage_stat.average()
+        mem_avail = psutil.virtual_memory().available
+
+        lines = [
+            f'In the past 24 hours, {product_settings.bot_name} has processed:',
+            f'`{self.messages.summarize()}` messages',
+            f'`{word_watch.scans.summarize()}` word watch scans',
+            f'`{word_watch.hits.summarize()}` word watch hits',
+            f'At an average of {round(cpu_avg*100,1)}% cpu usage and {humanize.naturalsize(mem_avg)} ({round(mem_avg/mem_avail*100,1)}%) memory usage',
+        ]
+        await ctx.reply(embed=discord.Embed(description='\n'.join(lines)))

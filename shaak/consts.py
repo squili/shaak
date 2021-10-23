@@ -25,7 +25,7 @@ from discord.ext     import commands
 from tortoise.models import Model
 
 from shaak.helpers import (str2bool, bool2str, mention2id_validate, MentionType,
-                           id2mention_validate, ensurebool, pass_value)
+                           id2mention_validate, ensurebool, pass_value, RollingValues)
 
 bu_invite_timeout = timedelta(days=3)
 
@@ -94,3 +94,6 @@ watch_setting_map = {
     'ping': pass_value,
     'ban': ww_ban_parse
 }
+
+cpu_usage_stat = RollingValues()
+mem_usage_stat = RollingValues()

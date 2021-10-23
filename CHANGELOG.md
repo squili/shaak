@@ -1,3 +1,6 @@
+### 2.1.0
+- Added `stats` command
+
 ### 2.0.7
 - Fixed ban utils reactions in threads
 

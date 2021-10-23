@@ -247,3 +247,30 @@ def duration_parse(text: str) -> Optional[str]:
 
 def escape_formatting(text: str) -> str:
     return text.replace('*', '\\*').replace('_', '\\_').replace('~~', '\\~~')
+
+class RollingStats:
+    def __init__(self):
+        self.inner = [[0 for _ in range(24)] for _ in range(2)]
+    
+    def record(self):
+        now = datetime.now()
+        self.inner[now.day % 2 - 1][now.hour] = 0
+        self.inner[now.day % 2][now.hour] += 1
+
+    def summarize(self) -> int:
+        now = datetime.now()
+        return sum(self.inner[now.day % 2][now.hour + 1 % 24:] + self.inner[now.day % 2 - 1][:now.hour + 1 % 24])
+
+class RollingValues:
+    def __init__(self):
+        self.inner = []
+
+    def push(self, value):
+        self.inner.append(value)
+        if len(self.inner) > 24:
+            self.inner = self.inner[1:]
+
+    def average(self):
+        if len(self.inner) == 0:
+            return 0
+        return sum(self.inner)/len(self.inner)
