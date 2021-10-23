@@ -95,5 +95,4 @@ watch_setting_map = {
     'ban': ww_ban_parse
 }
 
-cpu_usage_stat = RollingValues()
 mem_usage_stat = RollingValues()

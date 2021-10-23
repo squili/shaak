@@ -29,7 +29,7 @@ import psutil
 import humanize
 from discord.ext import commands
 
-from shaak.consts      import ResponseLevel, response_map, color_green, MentionType, cpu_usage_stat, mem_usage_stat
+from shaak.consts      import ResponseLevel, response_map, color_green, MentionType, mem_usage_stat
 from shaak.models      import GuildSettings, GlobalSettings
 from shaak.helpers     import chunks, platform_info, commas, getrange_s, escape_formatting, RollingStats
 from shaak.settings    import product_settings
@@ -357,7 +357,6 @@ class Utils(commands.Cog):
     async def message_stats(self, ctx: commands.Context):
 
         word_watch = self.bot.get_cog('WordWatch')
-        cpu_avg = cpu_usage_stat.average()
         mem_avg = mem_usage_stat.average()
         mem_avail = psutil.virtual_memory().available
 
@@ -366,6 +365,6 @@ class Utils(commands.Cog):
             f'`{self.messages.summarize()}` messages',
             f'`{word_watch.scans.summarize()}` word watch scans',
             f'`{word_watch.hits.summarize()}` word watch hits',
-            f'At an average of {round(cpu_avg*100,1)}% cpu usage and {humanize.naturalsize(mem_avg)} ({round(mem_avg/mem_avail*100,1)}%) memory usage',
+            f'At an average of `{humanize.naturalsize(mem_avg)}` (`{round(mem_avg/mem_avail*100,1)}%`) memory usage',
         ]
         await ctx.reply(embed=discord.Embed(description='\n'.join(lines)))

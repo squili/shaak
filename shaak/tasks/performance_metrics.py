@@ -18,7 +18,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 import psutil
 
 from shaak.base_task import BaseTask
-from shaak.consts    import TaskInfo, cpu_usage_stat, mem_usage_stat
+from shaak.consts    import TaskInfo, mem_usage_stat
 
 class PerformanceMetrics(BaseTask):
 
@@ -29,8 +29,6 @@ class PerformanceMetrics(BaseTask):
 
     async def initialize(self):
         self.process = psutil.Process()
-        self.process.cpu_percent()
 
     async def run(self):
-        cpu_usage_stat.push(self.process.cpu_percent())
         mem_usage_stat.push(self.process.memory_info().rss)

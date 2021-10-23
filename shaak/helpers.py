@@ -259,7 +259,7 @@ class RollingStats:
 
     def summarize(self) -> int:
         now = datetime.now()
-        return sum(self.inner[now.day % 2][now.hour + 1 % 24:] + self.inner[now.day % 2 - 1][:now.hour + 1 % 24])
+        return sum(self.inner[now.day % 2][:now.hour] + self.inner[now.day % 2 - 1][now.hour:])
 
 class RollingValues:
     def __init__(self):
