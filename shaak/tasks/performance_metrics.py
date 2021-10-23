@@ -29,6 +29,7 @@ class PerformanceMetrics(BaseTask):
 
     async def initialize(self):
         self.process = psutil.Process()
+        self.process.cpu_percent()
 
     async def run(self):
         cpu_usage_stat.push(self.process.cpu_percent())
