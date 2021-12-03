@@ -132,7 +132,7 @@ class BanUtils(BaseModule):
         except (discord.NotFound, discord.Forbidden):
             return
 
-        icon_url = source_guild.icon_url
+        icon_url = source_guild.icon.url
         target_user: discord.User = await self.utils.aggressive_resolve_user(crossban_event.event.target_id)
         if target_user == None:
             title = f'{crossban_event.event.target_id} banned in {source_guild.name}'

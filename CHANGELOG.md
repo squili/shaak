@@ -1,3 +1,6 @@
+### 2.1.1
+- Fixed straggler icon url reference
+
 ### 2.1.0
 - Added `stats` command
 
