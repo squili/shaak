@@ -30,7 +30,7 @@ from shaak.models import GuildSettings
 
 logger = logging.getLogger('shaak_helpers')
 
-_T = TypeVar('T')
+T = TypeVar('T')
 
 def chunks(lst: List[Any], size: int):
     size = max(1, size)
@@ -182,7 +182,7 @@ def pluralize(single: str, plural: str, length: int) -> str:
         return single
     return plural
 
-def pass_value(value: _T) -> _T:
+def pass_value(value: T) -> T:
     return value
 
 def resolve_mention(message: str) -> Optional[Tuple[MentionType, int]]:
@@ -274,3 +274,15 @@ class RollingValues:
         if len(self.inner) == 0:
             return 0
         return sum(self.inner)/len(self.inner)
+
+# https://stackoverflow.com/a/952952
+def flatten(t):
+    return [item for sublist in t for item in sublist]
+
+def multi_split(source: str, by: List[str]) -> List[str]:
+    if len(by) == 0:
+        return [source]
+    split = source.split(by.pop())
+    for entry in by:
+        split = flatten(map(lambda x: x.split(entry), split))
+    return list(filter(lambda x: len(x) > 0, split))

@@ -1,3 +1,6 @@
+### 2.2.0
+- Massban can now work off of files
+
 ### 2.1.1
 - Fixed straggler icon url reference
 

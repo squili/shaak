@@ -17,6 +17,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
 import io
+from re import split
 import time
 import traceback
 import random
@@ -31,12 +32,12 @@ from discord.ext import commands
 
 from shaak.consts      import ResponseLevel, response_map, color_green, MentionType, mem_usage_stat
 from shaak.models      import GuildSettings, GlobalSettings
-from shaak.helpers     import chunks, platform_info, commas, getrange_s, escape_formatting, RollingStats
+from shaak.helpers     import chunks, multi_split, platform_info, commas, getrange_s, escape_formatting, RollingStats
 from shaak.settings    import product_settings
 from shaak.extra_types import GeneralChannel
 from shaak.checks      import has_privlidged_role_check
 
-_T = TypeVar('T')
+T = TypeVar('T')
 
 class Utils(commands.Cog):
     
@@ -164,7 +165,7 @@ class Utils(commands.Cog):
         if not isinstance(ctx.channel, discord.DMChannel):
             await new_message.clear_reactions()
     
-    async def _aggressive_resolve(self, some_id: int, calm_method: Callable, aggressive_method: Coroutine, return_type: _T) -> Optional[_T]:
+    async def _aggressive_resolve(self, some_id: int, calm_method: Callable, aggressive_method: Coroutine, return_type: T) -> Optional[T]:
 
         optimistic = calm_method(some_id)
         if optimistic == None:
@@ -286,6 +287,19 @@ class Utils(commands.Cog):
     async def massban(self, ctx: commands.Context, *ids: int):
 
         await ctx.message.add_reaction('🔄')
+
+        ids = list(ids)
+
+        for attachment in ctx.message.attachments:
+            if attachment.content_type.startswith('text/plain') and attachment.size < (1024**2):
+                file = await attachment.to_file()
+                new = file.fp.read().decode('utf8')
+                for entry in multi_split(new, [' ', '\t', '\n', '\r']):
+                    try:
+                        ids.append(int(entry))
+                    except ValueError:
+                        await self.respond(ctx, ResponseLevel.general_error, f'Failed parsing id {entry}')
+                        return
 
         errors = []
         for index, id in enumerate(ids):
