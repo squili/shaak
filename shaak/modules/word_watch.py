@@ -369,7 +369,7 @@ class WordWatch(BaseModule):
         await self.scan_queue.put(None)
         await self.scan_task
 
-    def cog_unload():
+    def cog_unload(self):
 
         self.bot.loop.run_until_complete(self.close())
 
