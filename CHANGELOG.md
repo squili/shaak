@@ -1,3 +1,6 @@
+### 2.2.1
+- Fix incorrect permissions resolution
+
 ### 2.2.0
 - Massban can now work off of files
 

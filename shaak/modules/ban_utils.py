@@ -373,7 +373,7 @@ class BanUtils(BaseModule):
                     crosspost_perms = True
                     delete_perms = True
                 else:
-                    permissions = user.permissions_in(channel)
+                    permissions = channel.permissions_for(user)
                     ban_perms = permissions.ban_members
                     crosspost_perms = permissions.manage_guild
                     delete_perms = permissions.manage_guild
