@@ -1,0 +1,8 @@
+{
+  "upgrade": [
+    "alter table wordwatchsettings add column scan_bots bool null;"
+  ],
+  "downgrade": [
+    "alter table wordwatchsettings drop column scan_bots"
+  ]
+}

@@ -41,6 +41,7 @@ class WordWatchSettings(Model, ModuleSettingsMixin):
     guild       = fields.ForeignKeyField ('models.Guild', related_name='word_watch_settings')
     log_channel = fields.BigIntField     (null=True)
     header      = fields.TextField       (null=True)
+    scan_bots   = fields.BooleanField    (null=True)
 
 class WordWatchPingGroup(Model):
     guild = fields.ForeignKeyField ('models.Guild', related_name='word_watch_ping_groups')

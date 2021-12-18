@@ -158,12 +158,19 @@ class WordWatch(BaseModule):
 
         start_time = time.time()
         try:
+
+            module_settings: Optional[WordWatchSettings] = None
             
             if message.guild is None:
                 return
             
             if message.author.bot:
-                return
+                try:
+                    module_settings = await WordWatchSettings.get(guild_id=message.guild.id)
+                except DoesNotExist:
+                    return
+                if not module_settings.scan_bots:
+                    return
             
             if message.guild.id not in self.ignore_cache:
                 return
@@ -259,10 +266,11 @@ class WordWatch(BaseModule):
             if matches:
                 self.hits.record()
 
-                try:
-                    module_settings: WordWatchSettings = await WordWatchSettings.get(guild_id=message.guild.id)
-                except DoesNotExist:
-                    return
+                if module_settings == None:
+                    try:
+                        module_settings = await WordWatchSettings.get(guild_id=message.guild.id)
+                    except DoesNotExist:
+                        return
                 if module_settings.log_channel == None:
                     return
                     
@@ -968,3 +976,17 @@ class WordWatch(BaseModule):
 
         await ctx.message.remove_reaction('🔄', self.bot.user)
         await self.utils.respond(ctx, ResponseLevel.success)
+
+    @commands.command(name='ww.scan_bots')
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def ww_header(self, ctx: commands.Context, *, is_enabled: Optional[str] = None):
+
+        if is_enabled:
+            if is_enabled in ['yes', 'true', 'enable']:
+                await WordWatchSettings.filter(guild_id=ctx.guild.id).update(scan_bots=True)
+            else:
+                await WordWatchSettings.filter(guild_id=ctx.guild.id).update(scan_bots=False)
+            await self.utils.respond(ctx, ResponseLevel.success)
+        else:
+            module_settings: WordWatchSettings = await WordWatchSettings.get(guild_id=ctx.guild.id)
+            await self.utils.respond(ctx, ResponseLevel.success, 'Yes' if module_settings.scan_bots else 'No')

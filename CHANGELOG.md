@@ -1,3 +1,6 @@
+### 2.3.0
+- Add setting to scan bot messages in word watch
+
 ### 2.2.1
 - Fix incorrect permissions resolution
 
