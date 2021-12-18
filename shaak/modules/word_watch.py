@@ -257,7 +257,7 @@ class WordWatch(BaseModule):
                 except discord.NotFound:
                     pass # the message may be deleted before we get to it; this shouldn't cause us to not log the message
             
-            if ban_time != None:
+            if ban_time != None and not message.author.bot:
                 try:
                     await message.author.ban(delete_message_days=ban_time)
                 except discord.NotFound:

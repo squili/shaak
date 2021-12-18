@@ -60,3 +60,6 @@ Ping groups are lists of roles and users to be pinged once a match is found in a
 
 `ww.list_pings (group_name)`
 :   Lists the specified group's pings
+
+`ww.scan_bots [selected]`
+:   Sets whether to scan bots. Call with nothing to see the current value, and either `on`, `yes`, or `enable` to turn it on (and anything else to turn it off)
