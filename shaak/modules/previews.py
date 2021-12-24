@@ -62,10 +62,13 @@ class Previews(BaseModule):
             if channel == None:
                 return 4
         
+        if not channel.permissions_for(checking_user).read_message_history():
+            return 5
+        
         try:
             message = await channel.fetch_message(message_id)
         except (discord.NotFound, discord.Forbidden):
-            return 5
+            return 6
         
         embed = discord.Embed(
             description=message.content,
@@ -125,6 +128,8 @@ class Previews(BaseModule):
         elif err == 4:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Channel not found')
         elif err == 5:
+            await self.utils.respond(ctx, ResponseLevel.general_error, "You don't have access to that message")
+        elif err == 6:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Message not found')
     
     @commands.command('pv.add')

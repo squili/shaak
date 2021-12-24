@@ -1,3 +1,6 @@
+### 2.3.1
+- Fix previews permission checks
+
 ### 2.3.0
 - Add setting to scan bot messages in word watch
 
