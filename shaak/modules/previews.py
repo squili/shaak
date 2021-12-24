@@ -62,7 +62,7 @@ class Previews(BaseModule):
             if channel == None:
                 return 4
         
-        if not channel.permissions_for(checking_user).read_message_history():
+        if not channel.permissions_for(checking_user).read_message_history:
             return 5
         
         try:
