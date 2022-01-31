@@ -1,3 +1,6 @@
+### 2.3.2
+- Log to file
+
 ### 2.3.1
 - Fix previews permission checks
 

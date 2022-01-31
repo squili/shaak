@@ -18,13 +18,17 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 import asyncio
 import json
 import logging
+import sys
 from pathlib import Path
 
 from tortoise import Tortoise
 
 from shaak.models import GlobalSettings
 
-logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO, handlers=[
+    logging.StreamHandler(sys.stdout),
+    logging.FileHandler('shaak.log'),
+])
 
 def ask_user(msg: str, default_true: bool = True):
     return input(f'{msg} [{"Y" if default_true else "y"}/{"n" if default_true else "N"}] ').strip().lower()[0:] in (['y', ''] if default_true else ['y'])
