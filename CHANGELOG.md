@@ -1,3 +1,6 @@
+### 2.3.4
+- Fix clean shutdown
+
 ### 2.3.3
 - Add scan timeout
 

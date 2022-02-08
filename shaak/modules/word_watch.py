@@ -378,11 +378,12 @@ class WordWatch(BaseModule):
     async def close(self):
 
         await self.scan_queue.put(None)
-        await self.scan_task
+        if self.scan_task:
+            await self.scan_task
 
     def cog_unload(self):
 
-        self.bot.loop.run_until_complete(self.close())
+        self.bot.loop.run_until_complete(asyncio.create_task(self.close()))
 
     async def after_invoke_hook(self, ctx: commands.Context):
 
