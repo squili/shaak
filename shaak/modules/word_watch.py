@@ -15,6 +15,7 @@ You should have received a copy of the GNU Affero General Public License
 along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
+import asyncio
 import time
 import logging
 import io
@@ -368,7 +369,9 @@ class WordWatch(BaseModule):
             if item == None:
                 return
             try:
-                await self.scan_message(item)
+                await asyncio.wait_for(self.scan_message(item), timeout=60)
+            except TimeoutError:
+                logger.warn(f'message scan for {item.jump_url} timed out')
             except Exception as e:
                 await self.utils.log_background_error(item.guild, e)
     

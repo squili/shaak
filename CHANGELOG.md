@@ -1,3 +1,6 @@
+### 2.3.3
+- Add scan timeout
+
 ### 2.3.2
 - Log to file
 
