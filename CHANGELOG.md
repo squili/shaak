@@ -1,3 +1,6 @@
+### 2.3.5
+- Fix guild cleanup task
+
 ### 2.3.4
 - Fix clean shutdown
 

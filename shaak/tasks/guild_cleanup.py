@@ -37,9 +37,11 @@ class GuildCleanupTask(BaseTask):
         for db_guild in await Guild.all():
             if db_guild.id in guild_ids:
                 if db_guild.delete_at != None:
-                    await db_guild.update(delete_at=None)
+                    db_guild.delete_at = None
+                    await db_guild.save(update_fields=['delete_at'])
             else:
                 if db_guild.delete_at == None:
-                    await db_guild.update(delete_at=datetime.now() + timedelta(days=90))
+                    db_guild.delete_at = datetime.now() + timedelta(days=90)
+                    await db_guild.save(update_fields=['delete_at'])
             if db_guild.delete_at != None and db_guild.delete_at < now:
                 await db_guild.delete()
