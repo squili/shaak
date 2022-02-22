@@ -1,3 +1,6 @@
+### 2.4.0
+- Add option to limit amount of guilds the bot can be in
+
 ### 2.3.5
 - Fix guild cleanup task
 

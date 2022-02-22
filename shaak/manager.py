@@ -19,6 +19,7 @@ import logging
 from typing import Dict, Optional
 
 import discord
+from discord     import Embed
 from discord.ext import commands
 
 from shaak.checks     import has_privlidged_role_check
@@ -59,8 +60,22 @@ class Manager(commands.Cog):
         
         return True
     
+    async def max_guilds_check(self, guild: discord.Guild):
+        if guild.member_count <= 10:
+            await guild.leave()
+            embed = Embed(description='Shaak is currently not allowed in server with 10 or less members. You can join [the support server](https://discord.gg/SWMKshyutT) to learn when this restriction will be lifted.')
+            embed.set_footer(text=f'You are receiving this message because you own the server {guild.name}')
+            dm_channel = guild.owner.dm_channel
+            if dm_channel == None:
+                dm_channel = await guild.owner.create_dm()
+            await dm_channel.send(embed=embed)
+    
     @commands.Cog.listener()
     async def on_ready(self):
+        
+        if app_settings.max_guilds:
+            for guild in self.bot.guilds:
+                await self.max_guilds_check(guild)
 
         if self.bot.manager_ready.is_set():
             return # reconnects trigger on_ready as well
@@ -105,6 +120,9 @@ class Manager(commands.Cog):
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
         
+        if app_settings.max_guilds:
+            await self.max_guilds_check(guild)
+            
         await self.bot.manager_ready.wait()
 
         logger.info(f'Added to guild {guild.name} ({guild.id})')

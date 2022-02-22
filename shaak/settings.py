@@ -50,6 +50,7 @@ class AppSettings:
     database_url: str
     status:       str
     owner_id:     int
+    max_guilds:   bool
 
 @dataclasses.dataclass
 class ProductSettings:
