@@ -74,6 +74,7 @@ class Manager(commands.Cog):
     async def on_ready(self):
         
         if app_settings.max_guilds:
+            logger.info('Ensuring guild member counts')
             for guild in self.bot.guilds:
                 await self.max_guilds_check(guild)
 
