@@ -18,28 +18,40 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 import dataclasses
 import json
 import logging
+import os
 from pathlib import Path
 from typing  import List
 
 logger = logging.getLogger('shaak_settings')
 
+def load_from_env(field_name: str):
+    key = f'SHAAK_{field_name.upper()}'
+    try:
+        return os.environ[key]
+    except IndexError:
+        try:
+            return os.environ[field_name.upper()]
+        except IndexError:
+            logging.fatal(f'{field_name} field missing and {key} var not present')
+            exit(1)
+
 def load_from_file(file_name: str, required_fields: List[str]):
 
     file_path = Path(file_name)
+    raw_data = {}
     try:
         with file_path.open() as f:
             raw_data = json.load(f)
     except FileNotFoundError:
-        logging.fatal('settings.json not found')
-        exit(1)
-    except json.JSONDecodeError as e:
-        logging.fatal(f'error decoding settings.json: {e.msg} in {file_path.absolute()}:{e.lineno}:{e.colno}')
-        exit(1)
+        for field in required_fields:
+            raw_data[field] = load_from_env(field)
+    except json.JSONDecodeError:
+        for field in required_fields:
+            raw_data[field] = load_from_env(field)
 
     for item in required_fields:
         if item not in raw_data:
-            logging.fatal(f'{item} field missing from {file_path.absolute()}')
-            exit(1)
+            raw_data[item] = load_from_env(item)
     
     return raw_data
 
