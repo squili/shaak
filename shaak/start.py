@@ -20,6 +20,7 @@ import logging
 import signal
 
 import discord
+import os
 from tortoise import Tortoise
 
 from shaak.custom_bot import CustomBot, get_command_prefix, CustomHelp
@@ -45,6 +46,9 @@ logger = logging.getLogger('shaak_start')
 async def start_bot():
 
     logger.info('Initializing database')
+
+    # migrate database
+    os.system('aerich upgrade')
 
     # initialize database before starting bot
     await Tortoise.init(
