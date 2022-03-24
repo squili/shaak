@@ -68,7 +68,10 @@ class Manager(commands.Cog):
             dm_channel = guild.owner.dm_channel
             if dm_channel == None:
                 dm_channel = await guild.owner.create_dm()
-            await dm_channel.send(embed=embed)
+            try:
+                await dm_channel.send(embed=embed)
+            except Exception as e:
+                print(f'Failed sending dm to {guild.owner}: {e}')
     
     @commands.Cog.listener()
     async def on_ready(self):
