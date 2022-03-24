@@ -61,9 +61,9 @@ class Manager(commands.Cog):
         return True
     
     async def max_guilds_check(self, guild: discord.Guild):
-        if guild.member_count <= 100:
+        if guild.member_count <= 60:
             await guild.leave()
-            embed = Embed(description='Shaak is currently not allowed in server with 100 or less members. You can join [the support server](https://discord.gg/SWMKshyutT) to learn when this restriction will be lifted.')
+            embed = Embed(description='Shaak is currently not allowed in server with 60 or less members. You can join [the support server](https://discord.gg/SWMKshyutT) to learn when this restriction will be lifted.')
             embed.set_footer(text=f'You are receiving this message because you own the server {guild.name}')
             dm_channel = guild.owner.dm_channel
             if dm_channel == None:
