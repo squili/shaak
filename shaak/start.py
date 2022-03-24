@@ -59,13 +59,14 @@ async def start_bot():
     )
     
     # intents and cache flags
-    intents = discord.Intents.none()
-    intents.guilds = True
-    intents.messages = True
-    intents.reactions = True
-    intents.bans = True
-    intents.members = True
-    intents.message_content = True
+    intents = discord.Intents(
+        guilds = True,
+        messages = True,
+        reactions = True,
+        bans = True,
+        members = True,
+        message_content = True,
+    )
     member_cache_flags = discord.MemberCacheFlags(
         voice=False,
         joined=True
