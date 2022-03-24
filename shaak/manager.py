@@ -184,6 +184,8 @@ class Manager(commands.Cog):
         if setting_name in setting_structure:
             if setting_value != None:
                 setting_value = setting_structure[setting_name][0](setting_value)
+            if setting_name == 'error_channel':
+                self.utils.ensure_guild_contains_channel(ctx.guild.id, setting_value)
             await GuildSettings.filter(guild_id=ctx.guild.id).update(**{setting_name: setting_value})
             await self.utils.respond(ctx, ResponseLevel.success)
         else:

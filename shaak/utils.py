@@ -220,6 +220,14 @@ class Utils(commands.Cog):
         )
         embed.set_footer(text='Error report')
         await log_channel.send(embed=embed)
+    
+    def ensure_guild_contains_channel(self, guild: int, channel: int):
+
+        channel = self.bot.get_channel(channel)
+        if channel == None:
+            raise commands.CommandError('Channel not found')
+        if channel.guild.id != guild:
+            raise commands.CommandError('Nice try')
 
     @commands.command('about')
     async def about(self, ctx: commands.Context):

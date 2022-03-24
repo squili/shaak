@@ -120,6 +120,7 @@ class UserWatch(BaseModule):
                     channel_id = int(channel_reference)
                 except ValueError:
                     channel_id = mention2id(channel_reference, MentionType.channel)
+                self.utils.ensure_guild_contains_channel(ctx.guild.id, channel_id)
                 await UserWatchSettings.filter(guild_id=ctx.guild.id).update(log_channel=channel_id)
             await self.utils.respond(ctx, ResponseLevel.success)
         else:

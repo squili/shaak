@@ -1,3 +1,6 @@
+### 2.4.1
+- Fix log channels being able to be set to be from other servers
+
 ### 2.4.0
 - Add option to limit amount of guilds the bot can be in
 

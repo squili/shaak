@@ -633,6 +633,7 @@ class BanUtils(BaseModule):
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def bu_foreign(self, ctx: commands.Context, log_channel: commands.TextChannelConverter):
 
+        self.utils.ensure_guild_contains_channel(ctx.guild.id, log_channel.id)
         await BanUtilSettings.filter(guild_id=ctx.guild.id).update(foreign_log_channel=log_channel.id)
         await self.utils.respond(ctx, ResponseLevel.success)
     
