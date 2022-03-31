@@ -212,9 +212,14 @@ class DiscardingQueue:
     
     async def put(self, item):
         while self._queue.full():
-            self._queue.get_nowait()
+            entry = self._queue.get_nowait()
             logger.warn('queue discarding messages')
+            if hasattr(entry, 'aclose'):
+                await entry.aclose()
         return await self._queue.put(item)
+    
+    def __len__(self):
+        return self._queue.qsize()
 
 def get_or_create(d, k, t):
     if k not in d:

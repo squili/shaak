@@ -1,3 +1,6 @@
+### 2.5.0
+- Add queue system to massbans
+
 ### 2.4.1
 - Fix log channels being able to be set to be from other servers
 

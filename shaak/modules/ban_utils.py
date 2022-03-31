@@ -17,7 +17,7 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
 from datetime import datetime
-from typing   import List, Optional, Union
+from typing   import List, Optional, Tuple, Union
 
 import discord
 from discord.ext           import commands
@@ -27,7 +27,8 @@ from tortoise.transactions import in_transaction
 from shaak.base_module import BaseModule
 from shaak.checks      import has_privlidged_role_check
 from shaak.consts      import ModuleInfo, ResponseLevel, color_red
-from shaak.helpers     import check_privildged, datetime_repr, str2bool, bool2str
+from shaak.helpers     import (check_privildged, datetime_repr, str2bool, bool2str,
+                               DiscardingQueue, multi_split, commas, getrange_s)
 from shaak.models      import (BanUtilBanEvent, BanUtilCrossbanEvent, BanUtilInvite,
                                BanUtilSettings, BanUtilSubscription, BanUtilBlock)
 
@@ -40,16 +41,25 @@ class BanUtils(BaseModule):
     
     def __init__(self, *args, **kwargs):
 
-        self.report_locks: Union[int, asyncio.Lock] = {}
-
         super().__init__(*args, **kwargs)
+
+        self.report_locks: Union[int, asyncio.Lock] = {}
+        self.massban_queue = DiscardingQueue(0x10)
 
     async def initialize(self):
 
         for guild in self.bot.guilds:
             self.report_locks[guild.id] = asyncio.Lock()
 
+        self.massban_task = self.bot.loop.create_task(self.massban_loop())
+
         await super().initialize()
+    
+    async def close(self):
+
+        await self.massban_queue.put(None)
+        if self.massban_task:
+            await self.massban_task
     
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
@@ -754,3 +764,87 @@ class BanUtils(BaseModule):
                 module_settings.receive_invite_alerts = bool_value
             await module_settings.save(update_fields=['receive_invite_alerts'])
             await self.utils.respond(ctx, ResponseLevel.success)
+    
+    async def massban_loop(self):
+
+        await self.initialized.wait()
+
+        while True:
+            item = await self.massban_queue.get()
+            if item == None:
+                return
+            try:
+                await self.massban_inner(item)
+            except Exception as e:
+                await self.utils.log_background_error(item.guild, e)
+
+    async def massban_inner(self, item):
+
+        errors = []
+        for (index, id) in enumerate(item.ids):
+            try:
+                await item.ctx.guild.ban(discord.Object(id))
+            except Exception:
+                errors.append(index+1)
+
+        await item.condition.acquire()
+        item.condition.notify()
+        item.condition.release()
+        
+        if len(errors) > 0:
+            await self.utils.respond(item.ctx, ResponseLevel.general_error, f'Failed banning {commas(getrange_s(errors))}')
+        else:
+            await self.utils.respond(item.ctx, ResponseLevel.success)
+
+    @commands.command('massban')
+    @commands.guild_only()
+    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
+    async def massban(self, ctx: commands.Context, *ids: int):
+
+        await ctx.message.add_reaction('🔄')
+
+        ids = list(ids)
+
+        for attachment in ctx.message.attachments:
+            if attachment.content_type.startswith('text/plain') and attachment.size < (1024**2):
+                file = await attachment.to_file()
+                new = file.fp.read().decode('utf8')
+                for entry in multi_split(new, [' ', '\t', '\n', '\r']):
+                    try:
+                        ids.append(int(entry))
+                    except ValueError:
+                        await self.respond(ctx, ResponseLevel.general_error, f'Failed parsing id {entry}')
+                        return
+
+        condition = asyncio.Condition()
+        await condition.acquire()
+
+        await self.massban_queue.put(MassbanItem(
+            ctx,
+            self.utils,
+            ids,
+            f'Massban by {ctx.author.id}',
+            condition,
+        ))
+
+        position = len(self.massban_queue)
+
+        if position > 3:
+            await ctx.message.reply(f'You are position {position} in the queue')
+        
+        await condition.wait()
+        await ctx.message.remove_reaction('🔄', self.bot.user)
+
+class MassbanItem:
+
+    def __init__(self, ctx: commands.Context, utils, ids: List[int], reason: str, condition: asyncio.Condition):
+        self.ctx = ctx
+        self.utils = utils
+        self.ids = ids
+        self.reason = reason
+        self.condition = condition
+
+    async def aclose(self):
+        await self.utils.respond(self.ctx, ResponseLevel.general_error, 'Bot under too much pressure, cancelling...')
+        await self.condition.acquire()
+        await self.condition.notify_all()
