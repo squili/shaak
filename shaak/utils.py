@@ -289,43 +289,6 @@ class Utils(commands.Cog):
             ])
         ))
     
-    @commands.command('massban')
-    @commands.guild_only()
-    @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def massban(self, ctx: commands.Context, *ids: int):
-
-        await ctx.message.add_reaction('🔄')
-
-        ids = list(ids)
-
-        for attachment in ctx.message.attachments:
-            if attachment.content_type.startswith('text/plain') and attachment.size < (1024**2):
-                file = await attachment.to_file()
-                new = file.fp.read().decode('utf8')
-                for entry in multi_split(new, [' ', '\t', '\n', '\r']):
-                    try:
-                        ids.append(int(entry))
-                    except ValueError:
-                        await self.respond(ctx, ResponseLevel.general_error, f'Failed parsing id {entry}')
-                        return
-
-        errors = []
-        for index, id in enumerate(ids):
-            try:
-                await ctx.guild.ban(discord.Object(id=id), reason=f'Massban by {ctx.author.id}')
-            except Exception as e:
-                # this bug makes no sense
-                if ctx.guild.id == 740822668743278675:
-                    raise e
-                errors.append(index+1)
-        
-        await ctx.message.remove_reaction('🔄', self.bot.user)
-        
-        if len(errors) > 0:
-            await self.respond(ctx, ResponseLevel.general_error, f'Failed banning {commas(getrange_s(errors))}')
-        else:
-            await self.respond(ctx, ResponseLevel.success)
-    
     @commands.command('massunban')
     @commands.guild_only()
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
