@@ -22,28 +22,29 @@ import io
 import string
 import re
 from dataclasses import dataclass
-from typing      import Any, Dict, List, Optional, Tuple, Set
+from typing import Any, Dict, List, Optional, Tuple, Set
 
 import discord
-from discord.errors      import HTTPException
-from discord.ext         import commands
+from discord.errors import HTTPException
+from discord.ext import commands
 from tortoise.exceptions import DoesNotExist
 
 from shaak.base_module import BaseModule
-from shaak.checks      import has_privlidged_role_check, is_owner_check
-from shaak.consts      import MatchType, ModuleInfo, watch_setting_map
-from shaak.helpers     import (MentionType, between_segments, bool2str, commas,
-                               get_int_ranges, getrange_s, id2mention,
-                               link_to_message, mention2id, pluralize,
-                               resolve_mention, possesivize, str2bool,
-                               DiscardingQueue, RollingStats)
-from shaak.matcher  import pattern_preprocess, text_preprocess, word_matches, find_all_contains
-from shaak.models   import (WordWatchSettings, WordWatchPingGroup, WordWatchPing,
-                            WordWatchWatch, WordWatchIgnore, Guild)
+from shaak.checks import has_privlidged_role_check, is_owner_check
+from shaak.consts import MatchType, ModuleInfo, watch_setting_map
+from shaak.helpers import (MentionType, between_segments, bool2str, commas,
+                           get_int_ranges, getrange_s, id2mention,
+                           link_to_message, mention2id, pluralize,
+                           resolve_mention, possesivize, str2bool,
+                           DiscardingQueue, RollingStats)
+from shaak.matcher import pattern_preprocess, text_preprocess, word_matches, find_all_contains
+from shaak.models import (WordWatchSettings, WordWatchPingGroup, WordWatchPing,
+                          WordWatchWatch, WordWatchIgnore, Guild)
 from shaak.settings import product_settings
-from shaak.utils    import ResponseLevel
+from shaak.utils import ResponseLevel
 
 logger = logging.getLogger('shaak_word_watch')
+
 
 @dataclass
 class WatchCacheEntry:
@@ -59,15 +60,16 @@ class WatchCacheEntry:
     def __hash__(self):
         return self.id
 
+
 class WordWatch(BaseModule):
-    
+
     meta = ModuleInfo(
         name='word_watch',
         settings=WordWatchSettings
     )
 
     def __init__(self, *args, **kwargs):
-        
+
         super().__init__(*args, **kwargs)
 
         self.watch_cache:  Dict[int, List[WatchCacheEntry]] = {}
@@ -76,12 +78,12 @@ class WordWatch(BaseModule):
         self.hits = RollingStats()
         self.scan_queue = DiscardingQueue(0x400)
         self.bot.add_on_error_hooks(self.after_invoke_hook)
-    
+
     async def add_to_cache(self, watch: WordWatchWatch) -> None:
 
         if watch.guild.id not in self.watch_cache:
             self.watch_cache[watch.guild.id] = []
-        
+
         cache_entry = WatchCacheEntry(
             id=watch.id,
             compiled=None,
@@ -98,9 +100,11 @@ class WordWatch(BaseModule):
             elif watch.match_type == MatchType.contains.value:
                 pass
             elif watch.match_type == MatchType.regex.value:
-                cache_entry.compiled = re.compile(watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
+                cache_entry.compiled = re.compile(
+                    watch.pattern, re.IGNORECASE if watch.ignore_case else 0)
             else:
-                logger.error(f'bad watch cache entry with id {watch.id}: {watch.match_type} is not a valid match type. this should never happen!')
+                logger.error(
+                    f'bad watch cache entry with id {watch.id}: {watch.match_type} is not a valid match type. this should never happen!')
                 return
         except Exception:
             # if preprocessing fails, remove it from the database. if we don't do this,
@@ -116,10 +120,10 @@ class WordWatch(BaseModule):
         for guild in self.bot.guilds:
             self.watch_cache[guild.id] = []
             self.ignore_cache[guild.id] = set()
-        
+
         for watch in await WordWatchWatch.all().prefetch_related('guild', 'group'):
             await self.add_to_cache(watch)
-        
+
         for ignore in await WordWatchIgnore.all().prefetch_related('guild'):
             if ignore.guild.id in self.ignore_cache:
                 self.ignore_cache[ignore.guild.id].add(ignore.target_id)
@@ -130,41 +134,41 @@ class WordWatch(BaseModule):
         self.scan_task = self.bot.loop.create_task(self.scan_loop())
 
         await super().initialize()
-    
+
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
 
         await self.initialized.wait()
-        
+
         if guild.id not in self.watch_cache:
             self.watch_cache[guild.id] = []
             self.ignore_cache[guild.id] = set()
-        
+
         for thread in guild.threads:
             if not thread.me:
                 await thread.join()
-    
+
     @commands.Cog.listener()
     async def on_guild_remove(self, guild: discord.Guild):
 
         await self.initialized.wait()
-        
+
         if guild.id in self.watch_cache:
             del self.watch_cache[guild.id]
 
         if guild.id in self.ignore_cache:
             del self.ignore_cache[guild.id]
-        
+
     async def scan_message(self, message: discord.Message):
 
         start_time = time.time()
         try:
 
             module_settings: Optional[WordWatchSettings] = None
-            
+
             if message.guild is None:
                 return
-            
+
             if message.author.bot:
                 try:
                     module_settings = await WordWatchSettings.get(guild_id=message.guild.id)
@@ -172,19 +176,19 @@ class WordWatch(BaseModule):
                     return
                 if not module_settings.scan_bots:
                     return
-            
+
             if message.guild.id not in self.ignore_cache:
                 return
-            
+
             if message.channel.id in self.ignore_cache[message.guild.id]:
                 return
 
             if message.channel.category_id and message.channel.category_id in self.ignore_cache[message.guild.id]:
                 return
-            
+
             if message.author.id in self.ignore_cache[message.guild.id]:
                 return
-            
+
             check_member = message.webhook_id == None
             if isinstance(message.author, discord.User):
                 try:
@@ -196,7 +200,7 @@ class WordWatch(BaseModule):
                 for role in message.author.roles:
                     if role.id in self.ignore_cache[message.guild.id]:
                         return
-            
+
             delete_message = False
             ban_time = None
             matches = set()
@@ -235,11 +239,12 @@ class WordWatch(BaseModule):
                             matches.add((
                                 watch, match[0], match[1]
                             ))
-                
+
                 elif entry.match_type == MatchType.contains.value:
                     if entry.ignore_case and text_lower == None:
                         text_lower = message.content.lower()
-                    found = list(find_all_contains(text_lower if entry.ignore_case else message.content, entry.pattern))
+                    found = list(find_all_contains(
+                        text_lower if entry.ignore_case else message.content, entry.pattern))
                     if found:
                         delete_message = delete_message or entry.auto_delete
                         if entry.ban != None:
@@ -256,13 +261,13 @@ class WordWatch(BaseModule):
                 try:
                     await message.delete()
                 except discord.NotFound:
-                    pass # the message may be deleted before we get to it; this shouldn't cause us to not log the message
-            
+                    pass  # the message may be deleted before we get to it; this shouldn't cause us to not log the message
+
             if ban_time != None and not message.author.bot:
                 try:
                     await message.author.ban(delete_message_days=ban_time)
                 except discord.NotFound:
-                    pass # user could already be banned
+                    pass  # user could already be banned
 
             if matches:
                 self.hits.record()
@@ -274,11 +279,11 @@ class WordWatch(BaseModule):
                         return
                 if module_settings.log_channel == None:
                     return
-                    
+
                 log_channel = self.bot.get_channel(module_settings.log_channel)
                 if log_channel == None:
                     return
-                
+
                 pings = set()
                 groups = set()
                 for match in matches:
@@ -286,22 +291,25 @@ class WordWatch(BaseModule):
                         groups.add(match[0].group.id)
                         await match[0].group.fetch_related('pings')
                         for ping in match[0].group.pings:
-                            pings.add(id2mention(ping.target_id, ping.ping_type))
-                
+                            pings.add(id2mention(
+                                ping.target_id, ping.ping_type))
+
                 deduped_patterns = set([o[0].pattern for o in matches])
                 pattern_list = commas([str(i) for i in deduped_patterns])
-                pattern_list_code = commas([f"`{i}`" for i in deduped_patterns])
+                pattern_list_code = commas(
+                    [f"`{i}`" for i in deduped_patterns])
 
                 ranges = get_int_ranges(set(
-                    (index                       for range_ in
-                    (range(match[1], match[2]+1) for match  in matches)
-                                                 for index  in range_)
-                )) # p y t h o n i c
+                    (index for range_ in
+                     (range(match[1], match[2]+1) for match in matches)
+                     for index in range_)
+                ))  # p y t h o n i c
 
                 message_embed = discord.Embed(
                     color=discord.Color(0xd22513),
                     description='\n'.join([
-                        between_segments(message.content, ranges).replace('](', ']\\('),
+                        between_segments(message.content, ranges).replace(
+                            '](', ']\\('),
                         f'[Jump to message]({link_to_message(message)})'
                     ]),
                     timestamp=message.created_at
@@ -311,12 +319,17 @@ class WordWatch(BaseModule):
                     icon_url=message.author.display_avatar.url
                 )
                 if message.guild.icon:
-                    message_embed.set_footer(text=f'User ID: {message.author.id}', icon_url=message.guild.icon.url)
+                    message_embed.set_footer(
+                        text=f'User ID: {message.author.id}', icon_url=message.guild.icon.url)
                 else:
-                    message_embed.set_footer(text=f'User ID: {message.author.id}')
-                message_embed.add_field(name='User', value=id2mention(message.author.id, MentionType.user), inline=True)
-                message_embed.add_field(name='Channel', value=id2mention(message.channel.id, MentionType.channel), inline=True)
-                message_embed.add_field(name='Deleted', value=bool2str(delete_message, 'Yes', 'No'), inline=True)
+                    message_embed.set_footer(
+                        text=f'User ID: {message.author.id}')
+                message_embed.add_field(name='User', value=id2mention(
+                    message.author.id, MentionType.user), inline=True)
+                message_embed.add_field(name='Channel', value=id2mention(
+                    message.channel.id, MentionType.channel), inline=True)
+                message_embed.add_field(name='Deleted', value=bool2str(
+                    delete_message, 'Yes', 'No'), inline=True)
                 message_embed.add_field(name='Pattern' + pluralize("", "s", len(pattern_list_code)),
                                         value=pattern_list_code, inline=False)
 
@@ -326,9 +339,11 @@ class WordWatch(BaseModule):
                     content = template.safe_substitute(
                         patterns=pattern_list_code,
                         channel=message.channel.name,
-                        channel_reference=id2mention(message.channel.id, MentionType.channel),
+                        channel_reference=id2mention(
+                            message.channel.id, MentionType.channel),
                         user=f'{message.author.name}#{message.author.discriminator}',
-                        user_ping=id2mention(message.author.id, MentionType.user),
+                        user_ping=id2mention(
+                            message.author.id, MentionType.user),
                         user_id=message.author.id
                     )
                 else:
@@ -343,7 +358,7 @@ class WordWatch(BaseModule):
                 try:
                     await log_channel.send(content=content, embed=message_embed)
                 except HTTPException as e:
-                    if e.code == 50035: # embed too long
+                    if e.code == 50035:  # embed too long
                         # fallback
                         fallback_embed = discord.Embed(
                             color=discord.Color(0xd22513),
@@ -353,13 +368,15 @@ class WordWatch(BaseModule):
                             name=f'{message.author.name}#{message.author.discriminator} triggered Word Watch in #{message.channel.name}',
                             icon_url=message.author.display_avatar.url
                         )
-                        fallback_embed.set_footer(text=f'Fallback embed • Ping {product_settings.author_name}!')
+                        fallback_embed.set_footer(
+                            text=f'Fallback embed • Ping {product_settings.author_name}!')
                         await log_channel.send(content=content, embed=fallback_embed)
         finally:
             end_time = time.time()
             if end_time - start_time >= 1:
-                logger.warn(f'message scan took {round(end_time-start_time, 3)} seconds!')
-            
+                logger.warn(
+                    f'message scan took {round(end_time-start_time, 3)} seconds!')
+
     async def scan_loop(self):
 
         await self.initialized.wait()
@@ -374,7 +391,7 @@ class WordWatch(BaseModule):
                 logger.warn(f'message scan for {item.jump_url} timed out')
             except Exception as e:
                 await self.utils.log_background_error(item.guild, e)
-    
+
     async def close(self):
 
         await self.scan_queue.put(None)
@@ -394,20 +411,20 @@ class WordWatch(BaseModule):
 
         if message.author == self.bot.user:
             return
-        
+
         if not isinstance(message.channel, (discord.TextChannel)):
             return
 
         guild_prefix = await self.bot.command_prefix(self.bot, message)
         if not message.content.startswith(guild_prefix):
             await self.scan_queue.put(message)
-    
+
     @commands.Cog.listener()
     async def on_message_edit(self, old: discord.Message, new: discord.Message):
 
         if old.content != new.content:
             await self.scan_queue.put(new)
-    
+
     @commands.Cog.listener()
     async def on_thread_join(self, thread: discord.Thread):
 
@@ -423,7 +440,8 @@ class WordWatch(BaseModule):
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Please specify some patterns')
             return
 
-        split_settings = [i.split('.') for i in watch_settings.replace(' ', '').split(',')]
+        split_settings = [i.split('.')
+                          for i in watch_settings.replace(' ', '').split(',')]
         raw_settings = {
             'del': False,
             'cased': False,
@@ -444,25 +462,26 @@ class WordWatch(BaseModule):
         if raw_settings['type'] == None:
             await self.utils.respond(ctx, ResponseLevel.general_error, "Didn't specify a pattern type")
             return
-        
+
         parsed_settings = {}
         for setting_name in raw_settings:
             if setting_name not in watch_setting_map:
                 await self.utils.respond(ctx, ResponseLevel.general_error, f'Invalid setting name {setting_name}')
                 return
             try:
-                parsed_settings[setting_name] = watch_setting_map[setting_name](raw_settings[setting_name])
+                parsed_settings[setting_name] = watch_setting_map[setting_name](
+                    raw_settings[setting_name])
             except (ValueError, IndexError, AttributeError):
                 await self.utils.respond(ctx, ResponseLevel.general_error, f'Invalid setting {setting_name}.{raw_settings[setting_name]}')
                 return
-        
+
         if not parsed_settings['cased']:
             patterns = [i.lower() for i in patterns]
-        
+
         if parsed_settings['type'] == MatchType.word and parsed_settings['cased']:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Match type `word` cannot be case sensitive')
             return
-        
+
         if parsed_settings['ping']:
             try:
                 group = await WordWatchPingGroup.get(
@@ -532,21 +551,24 @@ class WordWatch(BaseModule):
                     updates += 1
                 else:
                     duplicates += 1
-        
+
         message_parts = []
         if additions:
-            message_parts.append(f'added {additions} new word{pluralize("", "s", additions)}')
+            message_parts.append(
+                f'added {additions} new word{pluralize("", "s", additions)}')
         if updates:
-            message_parts.append(f'updated {updates} existing word{pluralize("", "s", updates)}')
+            message_parts.append(
+                f'updated {updates} existing word{pluralize("", "s", updates)}')
         if duplicates:
-            message_parts.append(f'skipped {duplicates} duplicate word{pluralize("", "s", duplicates)}')
-        
+            message_parts.append(
+                f'skipped {duplicates} duplicate word{pluralize("", "s", duplicates)}')
+
         await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
 
         module_settings: WordWatchSettings = await WordWatchSettings.get(guild_id=ctx.guild.id)
         if module_settings.log_channel == None:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'WARNING: You have no log channel set, so nothing will be logged!')
-    
+
     async def compute_list_embed(self, ctx: commands.Context, items: List[Tuple[int, WatchCacheEntry]],
                                  page_number: int, page_max: int):
 
@@ -589,9 +611,9 @@ class WordWatch(BaseModule):
         if len(items) == 0:
             await self.utils.respond(ctx, ResponseLevel.success, 'No watches found')
             return
-        
+
         await self.utils.list_items(ctx, items, custom_embed=self.compute_list_embed)
-    
+
     @commands.command(name='ww.clear_watches')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_clear_watches(self, ctx: commands.Context):
@@ -602,7 +624,7 @@ class WordWatch(BaseModule):
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
             await self.utils.respond(ctx, ResponseLevel.internal_error, 'I have no idea where I am')
-    
+
     async def remove_watch(self, ctx: commands.Context, index: int) -> bool:
 
         try:
@@ -615,7 +637,7 @@ class WordWatch(BaseModule):
         except DoesNotExist:
             await self.utils.respond(ctx, ResponseLevel.internal_error, f'Index {index} not mapped to a valid ID')
             return False
-        
+
         await watch.delete()
         del self.watch_cache[ctx.guild.id][index-1]
         return False
@@ -640,13 +662,13 @@ class WordWatch(BaseModule):
                 errors.append(index)
             else:
                 offset += 1
-        
+
         if errors:
             await self.utils.respond(ctx, ResponseLevel.general_error,
-                f'Error removing {"indices" if len(errors) != 1 else "index"} {commas(getrange_s(errors))}')
+                                     f'Error removing {"indices" if len(errors) != 1 else "index"} {commas(getrange_s(errors))}')
         else:
             await self.utils.respond(ctx, ResponseLevel.success)
-    
+
     @commands.command(name='ww.qremove')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_qremove(self, ctx: commands.Context, *patterns: str):
@@ -667,7 +689,7 @@ class WordWatch(BaseModule):
 
         if errors:
             await self.utils.respond(ctx, ResponseLevel.general_error,
-                f'Error removing pattern{"s" if len(errors) != 1 else ""} {commas(errors)}')
+                                     f'Error removing pattern{"s" if len(errors) != 1 else ""} {commas(errors)}')
         else:
             await self.utils.respond(ctx, ResponseLevel.success)
 
@@ -698,7 +720,7 @@ class WordWatch(BaseModule):
 
         if len(errors) > 0:
             await self.utils.respond(ctx, ResponseLevel.general_error,
-                f'Error ignoring item{pluralize("", "s", len(errors))} {commas(getrange_s(errors))}')
+                                     f'Error ignoring item{pluralize("", "s", len(errors))} {commas(getrange_s(errors))}')
         else:
             if duplicates > 0:
                 await self.utils.respond(ctx, ResponseLevel.success, f'Skipped {duplicates} duplicates')
@@ -714,9 +736,10 @@ class WordWatch(BaseModule):
             await self.utils.respond(ctx, ResponseLevel.success, 'Nothing ignored')
             return
         await self.utils.list_items(ctx,
-            [id2mention(ignore.target_id, ignore.mention_type) for ignore in ignored]
-        )
-    
+                                    [id2mention(ignore.target_id, ignore.mention_type)
+                                     for ignore in ignored]
+                                    )
+
     @commands.command(name='ww.unignore')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_unignore(self, ctx: commands.Context, *references: str):
@@ -734,7 +757,7 @@ class WordWatch(BaseModule):
 
         if len(errors) > 0:
             await self.utils.respond(ctx, ResponseLevel.general_error,
-                f'Item{pluralize("", "s", len(errors))} {commas(getrange_s(errors))} not found')
+                                     f'Item{pluralize("", "s", len(errors))} {commas(getrange_s(errors))} not found')
         else:
             await self.utils.respond(ctx, ResponseLevel.success)
 
@@ -749,8 +772,10 @@ class WordWatch(BaseModule):
                 try:
                     channel_id = int(channel_reference)
                 except ValueError:
-                    channel_id = mention2id(channel_reference, MentionType.channel)
-                self.utils.ensure_guild_contains_channel(ctx.guild.id, channel_id)
+                    channel_id = mention2id(
+                        channel_reference, MentionType.channel)
+                self.utils.ensure_guild_contains_channel(
+                    ctx.guild.id, channel_id)
                 await WordWatchSettings.filter(guild_id=ctx.guild.id).update(log_channel=channel_id)
             await self.utils.respond(ctx, ResponseLevel.success)
         else:
@@ -758,7 +783,8 @@ class WordWatch(BaseModule):
             if module_settings.log_channel == None:
                 response = 'No log channel set'
             else:
-                response = id2mention(module_settings.log_channel, MentionType.channel)
+                response = id2mention(
+                    module_settings.log_channel, MentionType.channel)
             await self.utils.respond(ctx, ResponseLevel.success, response)
 
     @commands.command(name='ww.header')
@@ -774,7 +800,7 @@ class WordWatch(BaseModule):
         else:
             module_settings: WordWatchSettings = await WordWatchSettings.get(guild_id=ctx.guild.id)
             await self.utils.respond(ctx, ResponseLevel.success, module_settings.header or 'No header set')
-    
+
     @commands.command(name='ww.add_ping')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_add_ping(self, ctx: commands.Context, group_name: str, *pings: str):
@@ -793,7 +819,7 @@ class WordWatch(BaseModule):
                 mention_type, id = resolve_mention(ping)
             else:
                 mention_type = await self.utils.guess_id(id, ctx.guild)
-            
+
             if mention_type == None:
                 errors += 1
             else:
@@ -813,19 +839,22 @@ class WordWatch(BaseModule):
                         group=group
                     )
                     additions += 1
-        
+
         if duplicates or errors:
             message_parts = []
             if additions:
-                message_parts.append(f'added {additions} new ping{pluralize("", "s", additions)}')
+                message_parts.append(
+                    f'added {additions} new ping{pluralize("", "s", additions)}')
             if errors:
-                message_parts.append(f'ignored {errors} malformed ping{pluralize("", "s", errors)}')
+                message_parts.append(
+                    f'ignored {errors} malformed ping{pluralize("", "s", errors)}')
             if duplicates:
-                message_parts.append(f'skipped {duplicates} duplicate ping{pluralize("", "s", duplicates)}')
+                message_parts.append(
+                    f'skipped {duplicates} duplicate ping{pluralize("", "s", duplicates)}')
             await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
         else:
             await self.utils.respond(ctx, ResponseLevel.success)
-    
+
     @commands.command(name='ww.remove_ping')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_remove_ping(self, ctx: commands.Context, group_name: str, *pings: str):
@@ -851,26 +880,29 @@ class WordWatch(BaseModule):
 
         nonexistant = 0
         deletions = 0
-        
+
         db_pings = await WordWatchPing.filter(group=group).all()
         for db_ping in db_pings:
             if db_ping.target_id in to_delete:
                 await db_ping.delete()
                 deletions += 1
         nonexistant = len(to_delete) - deletions - malformed
-        
+
         if nonexistant or malformed:
             message_parts = []
             if deletions:
-                message_parts.append(f'removed {deletions} ping{pluralize("", "s", deletions)}')
+                message_parts.append(
+                    f'removed {deletions} ping{pluralize("", "s", deletions)}')
             if malformed:
-                message_parts.append(f'ignored {malformed} malformed ping{pluralize("", "s", malformed)}')
+                message_parts.append(
+                    f'ignored {malformed} malformed ping{pluralize("", "s", malformed)}')
             if nonexistant:
-                message_parts.append(f'skipped {nonexistant} nonexistant ping{pluralize("", "s", nonexistant)}')
+                message_parts.append(
+                    f'skipped {nonexistant} nonexistant ping{pluralize("", "s", nonexistant)}')
             await self.utils.respond(ctx, ResponseLevel.success, commas(message_parts).capitalize() + '.')
         else:
             await self.utils.respond(ctx, ResponseLevel.success)
-    
+
     @commands.command(name='ww.delete_group')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_delete_group(self, ctx: commands.Context, group_name: str):
@@ -882,7 +914,7 @@ class WordWatch(BaseModule):
         else:
             await group.delete()
             await self.utils.respond(ctx, ResponseLevel.success)
-    
+
     @commands.command(name='ww.list_groups')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_list_groups(self, ctx: commands.Context):
@@ -891,12 +923,13 @@ class WordWatch(BaseModule):
         entries = []
         for group in groups:
             ping_count = await WordWatchPing.filter(group=group).count()
-            entries.append(f'{group.name} ({ping_count} ping{pluralize("", "s", ping_count)})')
+            entries.append(
+                f'{group.name} ({ping_count} ping{pluralize("", "s", ping_count)})')
         if len(entries) == 0:
             await self.utils.respond(ctx, ResponseLevel.success, 'No groups found')
         else:
             await self.utils.list_items(ctx, entries)
-    
+
     @commands.command(name='ww.list_pings')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
     async def ww_list_pings(self, ctx: commands.Context, group_name: str):
@@ -921,7 +954,7 @@ class WordWatch(BaseModule):
                 await self.utils.list_items(ctx, [str(i) for i in self.watch_cache[guild_id]])
             else:
                 await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not found')
-    
+
     @commands.command(name='debug.queue_size')
     @is_owner_check()
     async def debug_queue_size(self, ctx: commands.Context):
@@ -931,7 +964,7 @@ class WordWatch(BaseModule):
     @commands.command(name='debug.transfer')
     @is_owner_check()
     async def debug_transfer(self, ctx: commands.Context, from_group: str, to_group: str, target_server_id: int):
-        
+
         target = self.bot.get_guild(target_server_id)
         if target is None:
             await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not found')
@@ -984,7 +1017,7 @@ class WordWatch(BaseModule):
 
     @commands.command(name='ww.scan_bots')
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
-    async def ww_header(self, ctx: commands.Context, *, is_enabled: Optional[str] = None):
+    async def ww_scan_bots(self, ctx: commands.Context, *, is_enabled: Optional[str] = None):
 
         if is_enabled:
             if is_enabled in ['yes', 'true', 'enable']:
