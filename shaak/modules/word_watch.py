@@ -986,7 +986,6 @@ class WordWatch(BaseModule):
 
         target_guild = await Guild.get(id=target_server_id)
 
-        print(f'copy from group id {source.pk} to group id {dest.pk}')
         for watch in await WordWatchWatch.filter(group_id=source.pk).all():
             try:
                 existing: WordWatchWatch = await WordWatchWatch.get(
