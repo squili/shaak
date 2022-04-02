@@ -987,6 +987,7 @@ class WordWatch(BaseModule):
         target_guild = await Guild.get(id=target_server_id)
 
         for watch in await WordWatchWatch.filter(group_id=source.pk).all():
+            print(watch)
             try:
                 existing: WordWatchWatch = await WordWatchWatch.get(
                     guild_id=target_server_id,
