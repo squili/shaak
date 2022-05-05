@@ -21,7 +21,7 @@ import logging
 import platform
 import re
 from datetime import datetime
-from typing   import Optional, List, Any, Tuple, Union, TypeVar
+from typing import Optional, List, Any, Tuple, Union, TypeVar
 
 import discord
 
@@ -32,28 +32,33 @@ logger = logging.getLogger('shaak_helpers')
 
 T = TypeVar('T')
 
+
 def chunks(lst: List[Any], size: int):
     size = max(1, size)
     return [lst[i:i+size] for i in range(0, len(lst), size)]
 
+
 def link_to_message(msg: discord.Message):
     return f'https://discord.com/channels/{msg.guild.id}/{msg.channel.id}/{msg.id}'
+
 
 def all_str(iterator):
     for item in iterator:
         yield str(item)
 
+
 def str2bool(msg: Union[str, bool]) -> Optional[bool]:
 
     if isinstance(msg, bool):
         return msg
-    
+
     if msg.lower() in ['false', 'no', 'disable', 'off']:
         return False
     elif msg.lower() in ['true', 'yes', 'enable', 'on']:
         return True
     else:
         return None
+
 
 def ensurebool(maybe_msg: Union[str, bool]) -> bool:
     if type(maybe_msg) == bool:
@@ -63,20 +68,24 @@ def ensurebool(maybe_msg: Union[str, bool]) -> bool:
         raise ValueError(maybe_msg)
     return resp
 
+
 def bool2str(value: bool, yes: str = 'on', no: str = 'off') -> str:
     if value:
         return yes
     return no
 
+
 class MentionType:
-    user    = '@!'
+    user = '@!'
     channel = '#'
-    role    = '@&'
+    role = '@&'
+
 
 def mention2id_validate(mention_type: MentionType):
     def wrapped(mention: str):
         return mention2id(mention, mention_type)
     return wrapped
+
 
 def mention2id(mention: str, mention_type: Optional[MentionType] = None) -> Optional[int]:
 
@@ -85,7 +94,10 @@ def mention2id(mention: str, mention_type: Optional[MentionType] = None) -> Opti
     except ValueError:
         raise InvalidId()
 
+
 regex_mention2id = re.compile(r'<((?:@!)|(?:@&)|(?:#))(\d+)>')
+
+
 def _mention2id(mention: str, mention_type: Optional[MentionType]) -> Optional[int]:
 
     if (match := regex_mention2id.match(mention)):
@@ -94,13 +106,16 @@ def _mention2id(mention: str, mention_type: Optional[MentionType]) -> Optional[i
         return int(match.group(2))
     return int(mention)
 
+
 def id2mention_validate(mention_type: MentionType):
     def wrapped(id: int):
         return id2mention(id, mention_type)
     return wrapped
 
+
 def id2mention(id: int, mention_type: MentionType) -> str:
     return f'<{mention_type}{id}>'
+
 
 async def check_privildged(guild: discord.Guild, member: discord.Member):
 
@@ -114,7 +129,8 @@ async def check_privildged(guild: discord.Guild, member: discord.Member):
             return True
     else:
         return False
-    
+
+
 def between_segments(source: str, segments: List[Tuple[int]], char: str = '`') -> str:
 
     processed = []
@@ -124,21 +140,21 @@ def between_segments(source: str, segments: List[Tuple[int]], char: str = '`') -
     offset = 0
     result = source
     for range_ in ranges:
-        result = between_segment(result, range_[0] + offset, range_[1] + offset + 1, char)
+        result = between_segment(
+            result, range_[0] + offset, range_[1] + offset + 1, char)
         offset += len(char)*2
     return result
+
 
 def between_segment(source: str, start: int, end: int, char: str = '`') -> str:
 
     return source[:start] + char + source[start:end] + char + source[end:]
 
-def platform_info() -> str:
-
-    return f'{platform.python_implementation()} v{platform.python_version()} on {platform.system()}'
 
 def get_int_ranges(numbers: List[int]) -> List[int]:
 
-    if len(numbers) == 0: return []
+    if len(numbers) == 0:
+        return []
     ordered = sorted(numbers)
     ranges = []
     first = None
@@ -159,6 +175,7 @@ def get_int_ranges(numbers: List[int]) -> List[int]:
         ranges.append((first, previous))
     return ranges
 
+
 def getrange_s(numbers: List[int]) -> List[str]:
 
     results = []
@@ -169,21 +186,28 @@ def getrange_s(numbers: List[int]) -> List[str]:
             results.append(f'{item[0]}-{item[1]}')
     return results
 
+
 def commas(values: List[Any]) -> str:
 
-    if len(values) == 0: return ''
-    if len(values) == 1: return str(values[0])
-    if len(values) == 2: return f'{values[0]} and {values[1]}'
+    if len(values) == 0:
+        return ''
+    if len(values) == 1:
+        return str(values[0])
+    if len(values) == 2:
+        return f'{values[0]} and {values[1]}'
     values[-1] = f'and {values[-1]}'
     return ', '.join(values)
+
 
 def pluralize(single: str, plural: str, length: int) -> str:
     if length == 1:
         return single
     return plural
 
+
 def pass_value(value: T) -> T:
     return value
+
 
 def resolve_mention(message: str) -> Optional[Tuple[MentionType, int]]:
 
@@ -192,24 +216,27 @@ def resolve_mention(message: str) -> Optional[Tuple[MentionType, int]]:
             return potential_type, mention2id(message, potential_type)
     return None, None
 
+
 def datetime_repr(dt: datetime) -> str:
     return dt.strftime('%d/%m/%y')
+
 
 def possesivize(word: str) -> str:
     if word.endswith('s'):
         return word + "'"
     return word + "'s"
 
+
 class DiscardingQueue:
 
     def __init__(self, max_size: int):
         self.max_size = max_size
         self._queue = asyncio.Queue(max_size)
-    
+
     @property
     def get(self):
         return self._queue.get
-    
+
     async def put(self, item):
         while self._queue.full():
             entry = self._queue.get_nowait()
@@ -217,17 +244,20 @@ class DiscardingQueue:
             if hasattr(entry, 'aclose'):
                 await entry.aclose()
         return await self._queue.put(item)
-    
+
     def __len__(self):
         return self._queue.qsize()
+
 
 def get_or_create(d, k, t):
     if k not in d:
         d[k] = t
     return d[k]
 
+
 def time_ms():
     return round(time.time() * 1000)
+
 
 def duration_parse(text: str) -> Optional[str]:
     if len(text) < 2:
@@ -250,13 +280,15 @@ def duration_parse(text: str) -> Optional[str]:
     except ValueError:
         return None
 
+
 def escape_formatting(text: str) -> str:
     return text.replace('*', '\\*').replace('_', '\\_').replace('~~', '\\~~')
+
 
 class RollingStats:
     def __init__(self):
         self.inner = [[0 for _ in range(24)] for _ in range(2)]
-    
+
     def record(self):
         now = datetime.now()
         self.inner[now.day % 2 - 1][now.hour] = 0
@@ -265,6 +297,7 @@ class RollingStats:
     def summarize(self) -> int:
         now = datetime.now()
         return sum(self.inner[now.day % 2][:now.hour] + self.inner[now.day % 2 - 1][now.hour:])
+
 
 class RollingValues:
     def __init__(self):
@@ -281,8 +314,11 @@ class RollingValues:
         return sum(self.inner)/len(self.inner)
 
 # https://stackoverflow.com/a/952952
+
+
 def flatten(t):
     return [item for sublist in t for item in sublist]
+
 
 def multi_split(source: str, by: List[str]) -> List[str]:
     if len(by) == 0:

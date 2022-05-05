@@ -17,12 +17,12 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
 import io
-from re import split
+import platform
 import time
 import traceback
 import random
 import sys
-from typing   import List, Optional, Union, Callable, TypeVar, Coroutine
+from typing import List, Optional, Union, Callable, TypeVar, Coroutine
 from datetime import datetime, timedelta
 
 import discord
@@ -30,25 +30,27 @@ import psutil
 import humanize
 from discord.ext import commands
 
-from shaak.consts      import ResponseLevel, response_map, color_green, MentionType, mem_usage_stat
-from shaak.models      import GuildSettings, GlobalSettings
-from shaak.helpers     import chunks, multi_split, platform_info, commas, getrange_s, escape_formatting, RollingStats
-from shaak.settings    import product_settings
+from shaak.consts import ResponseLevel, response_map, color_green, MentionType, mem_usage_stat
+from shaak.models import GuildSettings, GlobalSettings
+from shaak.helpers import chunks, commas, getrange_s, escape_formatting, RollingStats
+from shaak.settings import product_settings
 from shaak.extra_types import GeneralChannel
-from shaak.checks      import has_privlidged_role_check
+from shaak.checks import has_privlidged_role_check
 
 T = TypeVar('T')
 
+
 class Utils(commands.Cog):
-    
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.messages = RollingStats()
-    
+
     async def respond(self, ctx_or_message: Union[commands.Context, discord.Message], response_level: ResponseLevel, response: Optional[str] = None):
 
         if response_level not in response_map:
-            raise RuntimeError(f'Invalid response level {repr(response_level)}')
+            raise RuntimeError(
+                f'Invalid response level {repr(response_level)}')
 
         if isinstance(ctx_or_message, commands.Context):
             message: discord.Message = ctx_or_message.message
@@ -71,26 +73,26 @@ class Utils(commands.Cog):
                         be_loud = global_settings.default_verbosity
                     else:
                         be_loud = guild_settings.verbosity
-        
+
         if be_loud:
-            
+
             embed = discord.Embed(
                 color=response_color,
                 description=response
             )
-            
+
             if isinstance(message, commands.Context):
                 await message.send(embed=embed)
             else:
                 await message.channel.send(embed=embed)
-        
+
         else:
-        
+
             await message.add_reaction(response_emoji)
-    
+
     async def reaction_wait(self, ctx: commands.Context, target_message: discord.Message,
                             listen_for: List[str], timeout: float = 30.0) -> Optional[str]:
-        
+
         def check(reaction: discord.Reaction, user: discord.User) -> bool:
             return reaction.message == target_message and user == ctx.author and str(reaction) in listen_for
         try:
@@ -99,13 +101,13 @@ class Utils(commands.Cog):
             return None
         else:
             return str(reaction)
-    
+
     async def list_items(self, ctx: commands.Context, items: List[str], escape: bool = False,
                          title: Union[str, discord.embeds._EmptyEmbed] = discord.Embed.Empty, custom_embed: Optional[Coroutine] = None):
 
         if len(items) == 0:
             return
-        
+
         pages = chunks(items, 10)
         page_index = 0
         if custom_embed == None:
@@ -121,18 +123,18 @@ class Utils(commands.Cog):
         else:
             embed = await custom_embed(ctx, pages[page_index], page_index, len(pages))
         new_message = await ctx.send(embed=embed)
-        
+
         if len(pages) == 1:
             return
-        
+
         for emoji in ['⏪', '◀', '▶', '⏩']:
             await new_message.add_reaction(emoji)
-        
+
         def check(reaction: discord.Reaction, user: discord.User) -> bool:
             return reaction.message == new_message and user == ctx.author and str(reaction) in ['⏪', '◀', '▶', '⏩']
-        
+
         while True:
-            
+
             try:
                 reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
             except asyncio.TimeoutError:
@@ -161,10 +163,10 @@ class Utils(commands.Cog):
                 await new_message.edit(embed=embed)
                 if not isinstance(ctx.channel, discord.DMChannel):
                     await reaction.remove(user)
-        
+
         if not isinstance(ctx.channel, discord.DMChannel):
             await new_message.clear_reactions()
-    
+
     async def _aggressive_resolve(self, some_id: int, calm_method: Callable, aggressive_method: Coroutine, return_type: T) -> Optional[T]:
 
         optimistic = calm_method(some_id)
@@ -199,7 +201,7 @@ class Utils(commands.Cog):
                 return MentionType.channel
         else:
             return MentionType.user
-    
+
     async def log_background_error(self, guild: discord.Guild, error: Exception):
 
         guild_settings = await GuildSettings.get(guild_id=guild.id)
@@ -220,7 +222,7 @@ class Utils(commands.Cog):
         )
         embed.set_footer(text='Error report')
         await log_channel.send(embed=embed)
-    
+
     def ensure_guild_contains_channel(self, guild: int, channel: int):
 
         channel = self.bot.get_channel(channel)
@@ -239,23 +241,30 @@ class Utils(commands.Cog):
                 f'Bot source: {product_settings.bot_repo}',
                 f'Docs: {product_settings.bot_docs}',
                 f'Support the author: {product_settings.author_donate}',
-                f'Platform: {platform_info()}'
             ]),
             url=product_settings.author_page
         )
 
+        embed.add_field(
+            name='Kernel', value=f'`{platform.release()}`', inline=True)
+        embed.add_field(
+            name='Python', value=f'`{platform.python_implementation()} v{platform.python_version()}`', inline=True)
+        embed.add_field(name='Node', value=f'`{platform.node()}`', inline=True)
+
         await ctx.send(embed=embed)
-    
+
     @commands.command('ping')
     async def ping(self, ctx: commands.Context):
 
         now = datetime.now()
-        message_receive = round((now.microsecond - ctx.message.created_at.microsecond)/1000)
+        message_receive = round(
+            (now.microsecond - ctx.message.created_at.microsecond)/1000)
 
         def reaction_check(reaction: discord.Reaction, user: discord.User) -> bool:
             return user == self.bot.user and reaction.message.id == ctx.message.id and reaction.emoji == '🏓'
 
-        wait_task = asyncio.create_task(self.bot.wait_for('reaction_add', check=reaction_check, timeout=10.0))
+        wait_task = asyncio.create_task(self.bot.wait_for(
+            'reaction_add', check=reaction_check, timeout=10.0))
         start = time.time()
         await ctx.message.add_reaction('🏓')
         try:
@@ -267,10 +276,12 @@ class Utils(commands.Cog):
         await ctx.message.remove_reaction('🏓', self.bot.user)
 
         nonce = random.randint(0, 0xFFFFFFFF)
+
         def message_check(message: discord.Message) -> bool:
             return message.author == self.bot.user and message.nonce == nonce
-        
-        wait_task = asyncio.create_task(self.bot.wait_for('message', check=message_check, timeout=10.0))
+
+        wait_task = asyncio.create_task(self.bot.wait_for(
+            'message', check=message_check, timeout=10.0))
         start = time.time()
         new_message = await ctx.send('🏓', nonce=nonce)
         try:
@@ -288,7 +299,7 @@ class Utils(commands.Cog):
                 f'Message roundtrip: {message_roundtrip}ms',
             ])
         ))
-    
+
     @commands.command('massunban')
     @commands.guild_only()
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
@@ -302,14 +313,14 @@ class Utils(commands.Cog):
                 await ctx.guild.unban(discord.Object(id=id), reason=f'Massban by {ctx.author.id}')
             except Exception as e:
                 errors.append(index+1)
-        
+
         await ctx.message.remove_reaction('🔄', self.bot.user)
-        
+
         if len(errors) > 0:
             await self.respond(ctx, ResponseLevel.general_error, f'Failed unbanning {commas(getrange_s(errors))}')
         else:
             await self.respond(ctx, ResponseLevel.success)
-    
+
     @commands.command('massrole')
     @commands.guild_only()
     @commands.check_any(commands.has_permissions(administrator=True), has_privlidged_role_check())
@@ -325,7 +336,7 @@ class Utils(commands.Cog):
                 await member.add_roles(role, reason=f'Massrole by {ctx.author.id}')
             except Exception as e:
                 errors.append(index+1)
-        
+
         await ctx.message.remove_reaction('🔄', self.bot.user)
 
         if len(errors) > 0:
@@ -352,4 +363,5 @@ class Utils(commands.Cog):
             f'`{word_watch.hits.summarize()}` word watch hits',
             f'At an average of `{humanize.naturalsize(mem_avg)}` (`{round(mem_avg/mem_avail*100,1)}%`) memory usage',
         ]
+
         await ctx.reply(embed=discord.Embed(description='\n'.join(lines)))

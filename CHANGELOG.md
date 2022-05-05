@@ -1,3 +1,6 @@
+### 2.5.1
+- Add additional platform info to about command
+
 ### 2.5.0
 - Add queue system to massbans
 
