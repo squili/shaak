@@ -395,8 +395,11 @@ class WordWatch(BaseModule):
     async def close(self):
 
         await self.scan_queue.put(None)
-        if self.scan_task:
-            await self.scan_task
+        try:
+            if self.scan_task:
+                await self.scan_task
+        except AttributeError:
+            pass
 
     def cog_unload(self):
 
@@ -412,7 +415,7 @@ class WordWatch(BaseModule):
         if message.author == self.bot.user:
             return
 
-        if not isinstance(message.channel, (discord.TextChannel)):
+        if not isinstance(message.channel, (discord.TextChannel, discord.Thread)):
             return
 
         guild_prefix = await self.bot.command_prefix(self.bot, message)

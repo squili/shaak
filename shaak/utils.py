@@ -103,7 +103,7 @@ class Utils(commands.Cog):
             return str(reaction)
 
     async def list_items(self, ctx: commands.Context, items: List[str], escape: bool = False,
-                         title: Union[str, discord.embeds._EmptyEmbed] = discord.Embed.Empty, custom_embed: Optional[Coroutine] = None):
+                         title: Union[str, discord.Embed] = discord.Embed(), custom_embed: Optional[Coroutine] = None):
 
         if len(items) == 0:
             return

@@ -1,4 +1,4 @@
-git+https://github.com/Pycord-Development/pycord.git
+git+https://github.com/Rapptz/discord.py#9793fba3381c1fe4827e99740d6709ed07107295
 # older versions of tortoise contain an injection vulnerability that we don't want
 tortoise-orm[asyncpg]>=0.16.6
 python-rapidjson
@@ -7,3 +7,5 @@ ciso8601
 aerich==0.3.3
 psutil
 humanize
+mkdocs
+mkdocs-material

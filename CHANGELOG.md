@@ -1,3 +1,6 @@
+### 2.6.0
+- Switch backing library to discord.py
+
 ### 2.5.1
 - Add additional platform info to about command
 

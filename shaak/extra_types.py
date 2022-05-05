@@ -17,8 +17,8 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 
 from typing import Union
 
-from discord import TextChannel, VoiceChannel, CategoryChannel, StoreChannel, DMChannel, GroupChannel
+from discord import TextChannel, VoiceChannel, CategoryChannel, DMChannel, GroupChannel
 
-GuildChannel = Union[TextChannel, VoiceChannel, CategoryChannel, StoreChannel]
+GuildChannel = Union[TextChannel, VoiceChannel, CategoryChannel]
 PrivateChannel = Union[DMChannel, GroupChannel]
 GeneralChannel = Union[GuildChannel, PrivateChannel]
