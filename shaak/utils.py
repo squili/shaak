@@ -102,8 +102,7 @@ class Utils(commands.Cog):
         else:
             return str(reaction)
 
-    async def list_items(self, ctx: commands.Context, items: List[str], escape: bool = False,
-                         title: Union[str, discord.Embed] = discord.Embed(), custom_embed: Optional[Coroutine] = None):
+    async def list_items(self, ctx: commands.Context, items: List[str], custom_embed: Optional[Coroutine] = None):
 
         if len(items) == 0:
             return
@@ -112,11 +111,8 @@ class Utils(commands.Cog):
         page_index = 0
         if custom_embed == None:
             text = '\n'.join([item for item in pages[page_index]])
-            if escape:
-                text = f'```{text}```'
             embed = discord.Embed(
-                description=text,
-                title=title
+                description=text
             )
             if len(pages) > 1:
                 embed.set_footer(text=f'1/{len(pages)}')
