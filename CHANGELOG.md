@@ -1,3 +1,6 @@
+### 2.7.0
+- Remove message scan queue
+
 ### 2.6.0
 - Switch backing library to discord.py
 
