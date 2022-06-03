@@ -76,6 +76,7 @@ class WordWatch(BaseModule):
         self.ignore_cache: Dict[int, Set[int]] = {}
         self.scans = RollingStats()
         self.hits = RollingStats()
+        self.scan_queue = DiscardingQueue(0x400)
         self.bot.add_on_error_hooks(self.after_invoke_hook)
 
     async def add_to_cache(self, watch: WordWatchWatch) -> None:
@@ -129,6 +130,8 @@ class WordWatch(BaseModule):
             else:
                 logger.warn(f'orphaned ignore entry with id {ignore.id}')
                 await ignore.delete()
+
+        self.scan_task = self.bot.loop.create_task(self.scan_loop())
 
         await super().initialize()
 
@@ -374,20 +377,37 @@ class WordWatch(BaseModule):
                 logger.warn(
                     f'message scan took {round(end_time-start_time, 3)} seconds!')
 
+    async def scan_loop(self):
+
+        await self.initialized.wait()
+
+        while True:
+            item = await self.scan_queue.get()
+            if item == None:
+                return
+            try:
+                await asyncio.wait_for(self.scan_message(item), timeout=60)
+            except TimeoutError:
+                logger.warn(f'message scan for {item.jump_url} timed out')
+            except Exception as e:
+                await self.utils.log_background_error(item.guild, e)
+
     async def close(self):
-    
-        pass
+
+        await self.scan_queue.put(None)
+        try:
+            if self.scan_task:
+                await self.scan_task
+        except AttributeError:
+            pass
 
     def cog_unload(self):
 
         self.bot.loop.run_until_complete(asyncio.create_task(self.close()))
 
     async def after_invoke_hook(self, ctx: commands.Context):
-    
-        try:
-            await asyncio.wait_for(self.scan_message(ctx.message), timeout=60)
-        except TimeoutError:
-            logger.warn(f'message scan for {item.jump_url} timed out')
+
+        await self.scan_queue.put(ctx.message)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -400,19 +420,13 @@ class WordWatch(BaseModule):
 
         guild_prefix = await self.bot.command_prefix(self.bot, message)
         if not message.content.startswith(guild_prefix):
-            try:
-                await asyncio.wait_for(self.scan_message(message), timeout=60)
-            except TimeoutError:
-                logger.warn(f'message scan for {item.jump_url} timed out')
+            await self.scan_queue.put(message)
 
     @commands.Cog.listener()
     async def on_message_edit(self, old: discord.Message, new: discord.Message):
 
         if old.content != new.content:
-            try:
-                await asyncio.wait_for(self.scan_message(new), timeout=60)
-            except TimeoutError:
-                logger.warn(f'message scan for {item.jump_url} timed out')
+            await self.scan_queue.put(new)
 
     @commands.Cog.listener()
     async def on_thread_join(self, thread: discord.Thread):
@@ -943,6 +957,12 @@ class WordWatch(BaseModule):
                 await self.utils.list_items(ctx, [str(i) for i in self.watch_cache[guild_id]])
             else:
                 await self.utils.respond(ctx, ResponseLevel.general_error, 'Guild not found')
+
+    @commands.command(name='debug.queue_size')
+    @is_owner_check()
+    async def debug_queue_size(self, ctx: commands.Context):
+
+        await self.utils.respond(ctx, ResponseLevel.success, str(self.scan_queue._queue.qsize()))
 
     @commands.command(name='debug.transfer')
     @is_owner_check()
