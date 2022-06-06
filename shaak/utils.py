@@ -149,7 +149,6 @@ class Utils(commands.Cog):
                     text = '\n'.join([item for item in pages[page_index]])
                     embed = discord.Embed(
                         description=text,
-                        title=title
                     )
                     embed.set_footer(text=f'{page_index+1}/{len(pages)}')
                 else:
