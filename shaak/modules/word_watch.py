@@ -356,6 +356,8 @@ class WordWatch(BaseModule):
                     await log_channel.send(content=content, embed=message_embed)
                 except HTTPException as e:
                     if e.code == 50035:  # embed too long
+                        logger.warn(
+                            f'fallback embed raw: {message_embed.to_dict()}')
                         # fallback
                         fallback_embed = discord.Embed(
                             color=discord.Color(0xd22513),
@@ -375,7 +377,7 @@ class WordWatch(BaseModule):
                     f'message scan took {round(end_time-start_time, 3)} seconds!')
 
     async def close(self):
-    
+
         pass
 
     def cog_unload(self):
@@ -383,11 +385,11 @@ class WordWatch(BaseModule):
         self.bot.loop.run_until_complete(asyncio.create_task(self.close()))
 
     async def after_invoke_hook(self, ctx: commands.Context):
-    
+
         try:
             await asyncio.wait_for(self.scan_message(ctx.message), timeout=60)
         except TimeoutError:
-            logger.warn(f'message scan for {item.jump_url} timed out')
+            logger.warn(f'message scan for {ctx.message.jump_url} timed out')
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -403,7 +405,7 @@ class WordWatch(BaseModule):
             try:
                 await asyncio.wait_for(self.scan_message(message), timeout=60)
             except TimeoutError:
-                logger.warn(f'message scan for {item.jump_url} timed out')
+                logger.warn(f'message scan for {message.jump_url} timed out')
 
     @commands.Cog.listener()
     async def on_message_edit(self, old: discord.Message, new: discord.Message):
@@ -412,7 +414,7 @@ class WordWatch(BaseModule):
             try:
                 await asyncio.wait_for(self.scan_message(new), timeout=60)
             except TimeoutError:
-                logger.warn(f'message scan for {item.jump_url} timed out')
+                logger.warn(f'message scan for {new.jump_url} timed out')
 
     @commands.Cog.listener()
     async def on_thread_join(self, thread: discord.Thread):
