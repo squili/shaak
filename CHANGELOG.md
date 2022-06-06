@@ -1,3 +1,6 @@
+### 2.7.1
+- Remove deprecated item list handling
+
 ### 2.7.0
 - Remove message scan queue
 

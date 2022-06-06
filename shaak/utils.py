@@ -147,8 +147,6 @@ class Utils(commands.Cog):
                     page_index = len(pages) - 1
                 if custom_embed == None:
                     text = '\n'.join([item for item in pages[page_index]])
-                    if escape:
-                        text = f'```{text}```'
                     embed = discord.Embed(
                         description=text,
                         title=title
