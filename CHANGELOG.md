@@ -1,3 +1,7 @@
+### 2.7.3
+
+- Filter out networking errors
+
 ### 2.7.2
 
 - Add log for fallback embeds

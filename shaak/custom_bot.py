@@ -16,15 +16,17 @@ along with Shaak.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
 import asyncio
+import aiohttp
 
 import discord
-from discord.ext         import commands
+from discord.ext import commands
 from tortoise.exceptions import DoesNotExist
 
-from shaak.errors   import ModuleDisabled, NotAllowed, InvalidId
-from shaak.consts   import ResponseLevel
-from shaak.models   import GuildSettings, GlobalSettings
+from shaak.errors import ModuleDisabled, NotAllowed, InvalidId
+from shaak.consts import ResponseLevel
+from shaak.models import GuildSettings, GlobalSettings
 from shaak.settings import product_settings
+
 
 class CustomBot(commands.Bot):
 
@@ -33,7 +35,7 @@ class CustomBot(commands.Bot):
         super().__init__(*args, **kwargs)
         self.manager_ready = asyncio.Event()
         self.on_error_hooks = []
-    
+
     def add_on_error_hooks(self, coro):
 
         self.on_error_hooks.append(coro)
@@ -42,17 +44,17 @@ class CustomBot(commands.Bot):
 
         for coro in self.on_error_hooks:
             await coro(ctx)
-        
+
         if not hasattr(self, 'utils'):
             self.utils = self.get_cog('Utils')
-        
+
         if isinstance(error, commands.CheckAnyFailure):
             if len(error.errors) > 0:
                 error = error.errors[0]
         elif isinstance(error, commands.CommandInvokeError):
             error = error.original
-        
-        if isinstance(error, (ModuleDisabled, commands.CommandNotFound)):
+
+        if isinstance(error, (ModuleDisabled, commands.CommandNotFound, aiohttp.client_exceptions.ClientOSError)):
             return
         elif isinstance(error, (commands.MissingPermissions, NotAllowed)):
             await self.utils.respond(ctx, ResponseLevel.forbidden, 'You do not have permission to run this command')
@@ -69,8 +71,9 @@ class CustomBot(commands.Bot):
             await self.utils.respond(ctx, ResponseLevel.internal_error, f'Unhandled error of type {type(error).__name__}. Check the console!')
             raise error
 
+
 async def get_command_prefix(bot: CustomBot, message: discord.Message) -> str:
-    
+
     if message.guild != None:
         try:
             guild_settings: GuildSettings = await GuildSettings.get(guild_id=message.guild.id)
@@ -81,6 +84,7 @@ async def get_command_prefix(bot: CustomBot, message: discord.Message) -> str:
                 return guild_settings.prefix
     global_settings = await GlobalSettings.get(id=0)
     return global_settings.default_prefix
+
 
 class CustomHelp(commands.HelpCommand):
 
