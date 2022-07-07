@@ -54,7 +54,8 @@ class CustomBot(commands.Bot):
         elif isinstance(error, commands.CommandInvokeError):
             error = error.original
 
-        if isinstance(error, (ModuleDisabled, commands.CommandNotFound, aiohttp.client_exceptions.ClientOSError)):
+        if isinstance(error, (ModuleDisabled, commands.CommandNotFound, aiohttp.client_exceptions.ServerDisconnectedError,
+                              aiohttp.client_exceptions.ClientOSError)):
             return
         elif isinstance(error, (commands.MissingPermissions, NotAllowed)):
             await self.utils.respond(ctx, ResponseLevel.forbidden, 'You do not have permission to run this command')
